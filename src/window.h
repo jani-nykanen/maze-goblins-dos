@@ -10,8 +10,8 @@
 EMPTY_STRUCT(Window);
 
 
-typedef i16 (*UpdateCallback) (i16 step);
-typedef void (*RedrawCallback) (Canvas* canvas);
+typedef i16 (*UpdateCallback) (i16);
+typedef void (*RedrawCallback) (Canvas*);
 
 
 // All the parameters are ignored when compiled to DOS

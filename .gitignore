@@ -2,3 +2,5 @@ game.*
 *.obj
 project.*
 *.err
+!*.c
+!*.h

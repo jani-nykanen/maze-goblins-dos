@@ -15,22 +15,6 @@
 
 typedef struct {
 
-    i32 EDI;
-    i32 ESI;
-    i32 EBP;
-    i32 reserved;
-    i32 EBX;
-    i32 EDX;
-    i32 ECX;
-    i32 EAX;
-    i16 flags;
-    i16 ES,DS,FS,GS,IP,CS,SP,SS;
-
-} RMInfo;
-
-
-typedef struct {
-
     Canvas* framebuffer;
 
     i16 frameCounter;
@@ -38,39 +22,9 @@ typedef struct {
 
     UpdateCallback update;
     RedrawCallback redraw;
-    
+
 } _Window;
 
-/*
-static void simulate_real_mode_interrupt(i16 interruptNumber, i32 flags) {
-
-    const i16 INT_NO = 0x31;
-
-    union REGS regs;
-    struct SREGS sregs;
-
-    static RMInfo RMI;
-
-    memset(&RMI, 0, sizeof(RMInfo));
-    RMI.EAX = flags;
-    RMI.DS = 0; // segment;
-    RMI.EDX = 0;
-
-    regs.w.ax = 0x0300;
-    regs.h.bl = interruptNumber;
-    regs.h.bh = 0;
-    regs.w.cx = 0;
-    sregs.es = FP_SEG(&RMI);
-    regs.x.edi = FP_OFF(&RMI);
-    int386x(INT_NO, &regs, &regs, &sregs);
-}
-
-
-static void set_video_mode(u16 mode) {
-
-    simulate_real_mode_interrupt(0x10, mode);
-}
-*/
 
 
 static void vblank() {
@@ -80,9 +34,44 @@ static void vblank() {
 }
 
 
+static void set_palette() {
+
+    const u32 PALETTE_INDEX = 0x03c8;
+    const u32 PALETTE_DATA = 0x03c9;
+
+    u8 i = 0;
+    u8 r, g, b;
+
+    outp(PALETTE_INDEX,0);
+    do {
+
+        r = i >> 5;
+        g = i << 3;
+        g >>= 5;
+        b = i << 6;
+        b >>= 6;
+
+        r *= 31;
+        g *= 31;
+        b *= 85;
+
+        if (r >= 248) r = 255;
+        if (g >= 248) g = 255;
+
+        outp(PALETTE_DATA, r / 4);
+        outp(PALETTE_DATA, g / 4);
+        outp(PALETTE_DATA, b / 4);
+
+        
+    }
+    while ((++ i) != 0);
+}
+
+
 static void init_graphics() {
 
     _setvideomode(_MRES256COLOR);
+    set_palette();
 }
 
 
@@ -178,7 +167,6 @@ void dispose_window(Window* _window) {
     m_free(window);
 
     reset_keyboard_listener();
-    // set_video_mode(0x3);
     _setvideomode(_DEFAULTMODE);
 }
 
