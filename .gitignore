@@ -4,3 +4,4 @@ project.*
 *.err
 !*.c
 !*.h
+tools/bin

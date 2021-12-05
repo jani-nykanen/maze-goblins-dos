@@ -161,13 +161,13 @@ void dispose_window(Window* _window) {
 
     _Window* window = (_Window*) _window;
 
+    reset_keyboard_listener();
+    _setvideomode(_DEFAULTMODE);
+
     if (window == NULL) return;
 
     dispose_canvas(window->framebuffer);
     m_free(window);
-
-    reset_keyboard_listener();
-    _setvideomode(_DEFAULTMODE);
 }
 
 

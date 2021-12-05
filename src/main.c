@@ -24,6 +24,7 @@ i16 main() {
     window = new_window(320, 200, "Game", 1);
     if (window == NULL) {
 
+        dispose_window(NULL);
         print_error();
         return 1;
     }
