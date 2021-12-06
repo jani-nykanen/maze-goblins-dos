@@ -223,7 +223,7 @@ void canvas_draw_bitmap_region(Canvas* _canvas, Bitmap* _bmp,
 
     src = sy * bmp->width + sx;
     if (flip)
-        src += bmp->width - 1;
+        src += sw - 1;
 
     dest = dy * canvas->width + dx;
 
