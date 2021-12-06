@@ -7,3 +7,4 @@ OUT="bin/"
 
 mkdir -p bin
 ./tools/bin/png2bin "$IN"parrot.png "$OUT"PARROT.BIN -RLE
+./tools/bin/png2bin "$IN"test.png "$OUT"TEST.BIN

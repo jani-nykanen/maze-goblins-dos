@@ -8,6 +8,7 @@
 typedef struct {
 
     Bitmap* bmpParrot;
+    Bitmap* bmpTest;
 
 } Game;
 
@@ -25,6 +26,9 @@ static void redraw_game(Canvas* canvas) {
     canvas_clear(canvas, 182);
 
     canvas_draw_bitmap_fast(canvas, game->bmpParrot, 16, 16);
+
+    canvas_draw_bitmap_region(canvas, game->bmpTest, 16, 16, 32, 32,
+        32, 32, true);
 }
 
 
@@ -40,7 +44,8 @@ i16 init_game_scene() {
 
     printf("Loading...\n");
 
-    if ((game->bmpParrot = load_bitmap("PARROT.BIN")) == NULL) {
+    if ((game->bmpParrot = load_bitmap("PARROT.BIN")) == NULL ||
+        (game->bmpTest = load_bitmap("TEST.BIN")) == NULL) {
 
         dispose_game_scene();
         return 1;
@@ -55,6 +60,7 @@ void dispose_game_scene() {
     if (game == NULL) return;
 
     dispose_bitmap(game->bmpParrot);
+    dispose_bitmap(game->bmpTest);
     m_free(game);
 }
 

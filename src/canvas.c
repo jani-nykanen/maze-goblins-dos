@@ -10,6 +10,7 @@ typedef struct {
     u16 width;
     u16 height;
     u8* pixels;
+    u8* mask;
 
 } DirectBitmap;
 
@@ -193,3 +194,61 @@ void canvas_draw_bitmap_fast(Canvas* canvas, Bitmap* _bmp, i16 dx, i16 dy) {
     canvas_draw_bitmap_region_fast(canvas, _bmp, 
         0, 0, bmp->width, bmp->height, dx, dy);
 }
+
+
+void canvas_draw_bitmap_region(Canvas* _canvas, Bitmap* _bmp,
+    i16 sx, i16 sy, i16 sw, i16 sh, i16 dx, i16 dy, bool flip) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+    DirectBitmap* bmp = (DirectBitmap*) _bmp;
+
+    u32 dest;
+    u32 src;
+    i16 x, y;
+    i16 dir = 1 - 2 * flip;
+
+    if (canvas->clippingEnabled &&
+        !clip_rect_region(canvas, &sx, &sy, &sw, &sh, &dx, &dy, flip))
+        return;
+
+    // TODO: Do something when no mask is given and want to flip?
+    if (bmp->mask == NULL) {
+
+        if (!flip) {
+
+            canvas_draw_bitmap_region_fast(_canvas, _bmp, sx, sy, sw, sh, dx, dy);
+        }
+        return;
+    }
+
+    src = sy * bmp->width + sx;
+    if (flip)
+        src += bmp->width - 1;
+
+    dest = dy * canvas->width + dx;
+
+    for (y = 0; y < sh; ++ y) {
+
+        for (x = 0; x < sw; ++ x) {
+
+            canvas->pixels[dest] = (bmp->pixels[src] & bmp->mask[src]) | 
+                        (canvas->pixels[dest] & (~bmp->mask[src]));
+
+            ++ dest;
+            src += dir;
+        }
+
+        dest += canvas->width - sw;
+        src += bmp->width - sw * dir;
+    }
+}
+
+
+void canvas_draw_bitmap(Canvas* canvas, Bitmap* _bmp, i16 dx, i16 dy, bool flip) {
+
+    DirectBitmap* bmp = (DirectBitmap*) _bmp;
+
+    canvas_draw_bitmap_region(canvas, _bmp, 
+        0, 0, bmp->width, bmp->height, dx, dy, flip);
+}
+

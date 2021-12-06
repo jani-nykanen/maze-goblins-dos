@@ -22,5 +22,11 @@ void canvas_draw_bitmap_region_fast(Canvas* canvas, Bitmap* bmp,
     i16 sx, i16 sy, i16 sw, i16 sh, i16 dx, i16 dy);
 void canvas_draw_bitmap_fast(Canvas* canvas, Bitmap* bmp, i16 dx, i16 dy);
 
+void canvas_draw_bitmap_region(Canvas* canvas, Bitmap* bmp,
+    i16 sx, i16 sy, i16 sw, i16 sh, i16 dx, i16 dy, bool flip);
+void canvas_draw_bitmap(Canvas* canvas, Bitmap* bmp, 
+    i16 dx, i16 dy, bool flip);
+
+
 
 #endif // PROJECTNAME_CANVAS_H
