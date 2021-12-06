@@ -227,7 +227,7 @@ i32 main(i32 argc, str* argv) {
         printf("png2bin: Image conversion failed. Terminating.\n");
         return 1;
     }
-    printf("png2bin: Converted %s to %s successfully.\n", argv[1], argv[2]);
+    printf("png2bin: Converted %s to %s successfully. Flags: RLE=%d, bw=%d.\n", argv[1], argv[2], RLE, bw);
 
     return 0;
 }
