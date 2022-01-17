@@ -36,6 +36,9 @@ void canvas_draw_bitmap_region(Canvas* canvas, Bitmap* bmp,
 void canvas_draw_bitmap(Canvas* canvas, Bitmap* bmp, 
     i16 dx, i16 dy, bool flip);
 
+void canvas_draw_sprite_fast(Canvas* canvas, SpriteSheet* sheet,
+    i16 frame, i16 dx, i16 dy, bool flip);
+
 void canvas_draw_text_fast(Canvas* canvas, Bitmap* bmp,
     str text, i16 x, i16 y, 
     i16 xoff, i16 yoff, TextAlign align);

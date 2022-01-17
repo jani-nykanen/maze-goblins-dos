@@ -19,6 +19,17 @@ typedef struct {
 
     u16 width;
     u16 height;
+    u16 count;
+
+    DirectBitmap** sprites;
+
+} DirectSpriteSheet;
+
+
+typedef struct {
+
+    u16 width;
+    u16 height;
     u8* pixels;
 
     bool clippingEnabled;
@@ -251,6 +262,16 @@ void canvas_draw_bitmap(Canvas* canvas, Bitmap* _bmp, i16 dx, i16 dy, bool flip)
     canvas_draw_bitmap_region(canvas, _bmp, 
         0, 0, bmp->width, bmp->height, dx, dy, flip);
 }
+
+
+void canvas_draw_sprite_fast(Canvas* _canvas, SpriteSheet* _sheet,
+    i16 frame, i16 dx, i16 dy, bool flip) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+    DirectSpriteSheet* sheet = (DirectSpriteSheet*) sheet;
+
+    // ...
+}   
 
 
 void canvas_draw_text_fast(Canvas* canvas, Bitmap* _bmp,

@@ -11,6 +11,8 @@ typedef struct {
     Bitmap* bmpTest;
     Bitmap* bmpFont;
 
+    SpriteSheet* sprTest;
+
 } Game;
 
 static Game* game = NULL;
@@ -55,6 +57,12 @@ i16 init_game_scene() {
         return 1;
     }
 
+    if ((game->sprTest = create_sprite_sheet_from_bitmap(game->bmpTest, 16, 16)) == NULL) {
+
+        dispose_game_scene();
+        return 1;
+    }
+
     return 0;
 }
 
@@ -65,6 +73,10 @@ void dispose_game_scene() {
 
     dispose_bitmap(game->bmpParrot);
     dispose_bitmap(game->bmpTest);
+    dispose_bitmap(game->bmpFont);
+
+    dispose_sprite_sheet(game->sprTest);
+
     m_free(game);
 }
 

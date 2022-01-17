@@ -208,7 +208,7 @@ SpriteSheet* create_sprite_sheet_from_bitmap(Bitmap* _bmp, u16 width, u16 height
     u16 w, h;
     u32 start;
 
-    if (bmp->width % width != 0 || bmp->height % height != 0) {
+    if ((bmp->width % width) != 0 || (bmp->height % height) != 0) {
 
         m_throw_error("Could not create a sprite sheet from a bitmap: invalid dimensions.", NULL, NULL);
         return NULL;
@@ -221,11 +221,12 @@ SpriteSheet* create_sprite_sheet_from_bitmap(Bitmap* _bmp, u16 width, u16 height
         return NULL;
     }
 
-    w = bmp->width % width;
-    h = bmp->height % height;
+    w = bmp->width / width;
+    h = bmp->height / height;
 
     sheet->count = w * h;
     sheet->sprites = (_Bitmap**) calloc(sheet->count, sizeof(_Bitmap*));
+
     if (sheet->sprites == NULL) {
 
         m_memory_error();
