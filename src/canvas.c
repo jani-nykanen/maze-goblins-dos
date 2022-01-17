@@ -270,7 +270,30 @@ void canvas_draw_sprite_fast(Canvas* _canvas, SpriteSheet* _sheet,
     _Canvas* canvas = (_Canvas*) _canvas;
     DirectSpriteSheet* sheet = (DirectSpriteSheet*) sheet;
 
-    // ...
+    u32 dest;
+    u32 src;
+    i16 y;
+
+    // If clipping is enabled, just draw the sprite normally, because
+    // there is no speed benefits anyway
+    if (canvas->clippingEnabled) {
+
+        canvas_draw_bitmap_region_fast(_canvas, sheet->sprites[frame], 
+            0, 0, sheet->width, sheet->height, dx, dy);
+        return;
+    }
+
+    // Otherwise draw things in a slightly faster way
+    
+    dest = dy * canvas->width + dx;
+    src = 0;
+
+    for (y = 0; y < sheet->height; ++ y) {
+        
+        memcpy(canvas->pixels + dest, sheet->sprites[frame]->pixels + src, sheet->width);
+        src += (u32) sheet->width;
+        dest += (u32) canvas->width;
+    }
 }   
 
 
