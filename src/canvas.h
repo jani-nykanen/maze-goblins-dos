@@ -6,6 +6,15 @@
 #include "bitmap.h"
 
 
+typedef enum {
+
+    ALIGN_LEFT = 0,
+    ALIGN_CENTER = 1,
+    ALIGN_RIGHT = 2
+
+} TextAlign;
+
+
 EMPTY_STRUCT(Canvas);
 
 
@@ -27,6 +36,12 @@ void canvas_draw_bitmap_region(Canvas* canvas, Bitmap* bmp,
 void canvas_draw_bitmap(Canvas* canvas, Bitmap* bmp, 
     i16 dx, i16 dy, bool flip);
 
+void canvas_draw_text_fast(Canvas* canvas, Bitmap* bmp,
+    str text, i16 x, i16 y, 
+    i16 xoff, i16 yoff, TextAlign align);
+void canvas_draw_text(Canvas* canvas, Bitmap* bmp,
+    str text, i16 x, i16 y, 
+    i16 xoff, i16 yoff, TextAlign align);   
 
 
 #endif // PROJECTNAME_CANVAS_H

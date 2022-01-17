@@ -252,3 +252,61 @@ void canvas_draw_bitmap(Canvas* canvas, Bitmap* _bmp, i16 dx, i16 dy, bool flip)
         0, 0, bmp->width, bmp->height, dx, dy, flip);
 }
 
+
+void canvas_draw_text_fast(Canvas* canvas, Bitmap* _bmp,
+    str text, i16 x, i16 y, i16 xoff, i16 yoff, TextAlign align) {
+
+    DirectBitmap* bmp = (DirectBitmap*) _bmp;
+
+    i16 dx, dy;
+
+    i16 charw = bmp->width / 16;
+    i16 charh = charw;
+
+    i16 chr;
+    i16 i = 0;
+
+    i16 sx;
+    i16 sy;
+
+    switch (align) {
+    
+    case ALIGN_RIGHT:
+        x -= strlen(text) * (charw + xoff);
+        break;
+
+    case ALIGN_CENTER:
+        x -= strlen(text) * (charw + xoff) / 2;
+        break;
+    
+    default:
+        break;
+    }
+
+    dx = x;
+    dy = y;
+
+    while ((i16)(chr = text[i ++]) != '\0') {
+
+        if (chr == '\n') {
+
+            dy += charh + yoff;
+            dx = x;
+            continue;
+        }
+
+        sx = chr % 16;
+        sy = chr / 16;
+
+        canvas_draw_bitmap_region_fast(canvas, _bmp, 
+            sx*charw, sy*charh, charw, charh, dx, dy);
+
+        dx += charw + xoff;
+    }
+}
+
+
+void canvas_draw_text(Canvas* canvas, Bitmap* bmp,
+    str text, i16 x, i16 y, i16 xoff, i16 yoff, TextAlign align) {
+
+}

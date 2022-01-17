@@ -9,6 +9,7 @@ typedef struct {
 
     Bitmap* bmpParrot;
     Bitmap* bmpTest;
+    Bitmap* bmpFont;
 
 } Game;
 
@@ -29,6 +30,8 @@ static void redraw_game(Canvas* canvas) {
 
     canvas_draw_bitmap_region(canvas, game->bmpTest, 16, 16, 32, 32,
         32, 32, true);
+
+    canvas_draw_text_fast(canvas, game->bmpFont, "HELLO WORLD!", 160, 4, 0, 0, ALIGN_CENTER);
 }
 
 
@@ -45,7 +48,8 @@ i16 init_game_scene() {
     printf("Loading...\n");
 
     if ((game->bmpParrot = load_bitmap("PARROT.BIN")) == NULL ||
-        (game->bmpTest = load_bitmap("TEST.BIN")) == NULL) {
+        (game->bmpTest = load_bitmap("TEST.BIN")) == NULL ||
+        (game->bmpFont = load_bitmap("FONT.BIN")) == NULL) {
 
         dispose_game_scene();
         return 1;

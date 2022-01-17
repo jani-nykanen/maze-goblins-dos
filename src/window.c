@@ -51,12 +51,12 @@ static void set_palette() {
         b = i << 6;
         b >>= 6;
 
-        r *= 31;
-        g *= 31;
+        r *= 36;
+        g *= 36;
         b *= 85;
 
-        if (r >= 248) r = 255;
-        if (g >= 248) g = 255;
+        if (r >= 252) r = 255;
+        if (g >= 252) g = 255;
 
         outp(PALETTE_DATA, r / 4);
         outp(PALETTE_DATA, g / 4);
