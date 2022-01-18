@@ -16,17 +16,6 @@ typedef struct {
 } _Bitmap;
 
 
-typedef struct {
-
-    u16 width;
-    u16 height;
-    u16 count;
-
-    _Bitmap** sprites;
-
-} _SpriteSheet;
-
-
 static bool next_char(u8* out, FILE* f) {
 
     i16 c = fgetc(f);
@@ -197,73 +186,4 @@ void dispose_bitmap(Bitmap* _bmp) {
     m_free(bmp->pixels);
     m_free(bmp->mask);
     m_free(bmp);
-}
-
-
-SpriteSheet* create_sprite_sheet_from_bitmap(Bitmap* _bmp, u16 width, u16 height) {
-    
-    _SpriteSheet* sheet;
-    _Bitmap* bmp = (_Bitmap*) _bmp;
-    i16 x, y;
-    u16 w, h;
-    u32 start;
-
-    if ((bmp->width % width) != 0 || (bmp->height % height) != 0) {
-
-        m_throw_error("Could not create a sprite sheet from a bitmap: invalid dimensions.", NULL, NULL);
-        return NULL;
-    }
-    
-    sheet = (_SpriteSheet*) calloc(1, sizeof(_SpriteSheet));
-    if (sheet == NULL) {
-
-        m_memory_error();
-        return NULL;
-    }
-
-    w = bmp->width / width;
-    h = bmp->height / height;
-
-    sheet->count = w * h;
-    sheet->sprites = (_Bitmap**) calloc(sheet->count, sizeof(_Bitmap*));
-
-    if (sheet->sprites == NULL) {
-
-        m_memory_error();
-        return NULL;
-    }
-
-    for (y = 0; y < h; ++ y) {
-   
-        for (x = 0; x < w; ++ x) {
-
-            start = y * h * bmp->width + x * w;
-
-            sheet->sprites[y*w + x] = (_Bitmap*)create_bitmap_from_data(width, height, 
-                    bmp->pixels, bmp->mask,
-                    start, (u32) bmp->width);
-            if (sheet->sprites[y*w + x] == NULL) {
-
-                dispose_sprite_sheet((SpriteSheet*) sheet);
-                return NULL;
-            }
-        }
-    }
-
-    return (SpriteSheet*) sheet;
-}
-
-
-void dispose_sprite_sheet(SpriteSheet* _sheet) {
-
-    _SpriteSheet* sheet = (_SpriteSheet*) _sheet;
-    u16 i;
-    
-    if (sheet == NULL) return;
-
-    for (i = 0; i < sheet->count; ++ i) {
-
-        dispose_bitmap((Bitmap*) sheet->sprites[i]);
-    }
-    m_free(sheet);
 }

@@ -5,6 +5,54 @@
 #include <string.h>
 
 
+#define TEXT_FUNCTION(func) DirectBitmap* bmp = (DirectBitmap*) _bmp;\ 
+\ 
+    i16 dx, dy;\ 
+\ 
+    i16 charw = bmp->width / 16;\ 
+    i16 charh = charw;\ 
+\ 
+    i16 chr;\ 
+    i16 i = 0;\ 
+\ 
+    i16 sx;\ 
+    i16 sy;\ 
+\ 
+    switch (align) {\ 
+    \ 
+    case ALIGN_RIGHT:\ 
+        x -= strlen(text) * (charw + xoff);\ 
+        break;\ 
+\ 
+    case ALIGN_CENTER:\ 
+        x -= strlen(text) * (charw + xoff) / 2;\ 
+        break;\ 
+    \ 
+    default:\ 
+        break;\ 
+    }\ 
+\ 
+    dx = x;\ 
+    dy = y;\ 
+\ 
+    while ((i16)(chr = text[i ++]) != '\0') {\ 
+\ 
+        if (chr == '\n') {\ 
+\ 
+            dy += charh + yoff;\ 
+            dx = x;\ 
+            continue;\ 
+        }\ 
+\ 
+        sx = chr % 16;\ 
+        sy = chr / 16;\ 
+\ 
+        func;\ 
+\ 
+        dx += charw + xoff;\ 
+    }
+
+
 typedef struct {
 
     u16 width;
@@ -19,50 +67,40 @@ typedef struct {
 
     u16 width;
     u16 height;
-    u16 count;
-
-    DirectBitmap** sprites;
-
-} DirectSpriteSheet;
-
-
-typedef struct {
-
-    u16 width;
-    u16 height;
     u8* pixels;
 
     bool clippingEnabled;
+    Rect_i16 clipArea;
 
 } _Canvas;
 
 
 static bool clip_rect(_Canvas* canvas, 
-    i16* x, i32* y, 
-    i16* w, i32* h) {
+    i16* x, i16* y, 
+    i16* w, i16* h) {
 
     // Left
-    if (*x < 0) {
+    if (*x < canvas->clipArea.x) {
 
-        *w -= 0 - (*x);
-        *x = 0;
+        *w -= canvas->clipArea.x - (*x);
+        *x = canvas->clipArea.x;
     }
     // Right
-    if (*x+*w >= canvas->width) {
+    if (*x+*w >= canvas->clipArea.x + canvas->clipArea.w) {
 
-        *w -= (*x+*w) - canvas->width;
+        *w -= (*x+*w) - (canvas->clipArea.x + canvas->width);
     }
 
     // Top
-    if (*y < 0) {
+    if (*y < canvas->clipArea.y) {
 
-        *h -= 0 - (*y);
-        *y = 0;
+        *h -= canvas->clipArea.y - (*y);
+        *y = canvas->clipArea.y;
     }
     // Bottom
-    if (*y+*h >= canvas->height) {
+    if (*y+*h >= canvas->clipArea.y + canvas->clipArea.h) {
 
-        *h -= (*y + *h) - canvas->height;
+        *h -= (*y + *h) - (canvas->clipArea.y + canvas->clipArea.h);
     }
 
     return *w > 0 && *h > 0;
@@ -77,34 +115,34 @@ static bool clip_rect_region(_Canvas* canvas,
 
     // Left
     ow = *sw;
-    if(*dx < 0) {
+    if(*dx < canvas->clipArea.x) {
 
-        *sw += (*dx);
+        *sw -= canvas->clipArea.x - (*dx);
         if(!flip)
             *sx += ow-(*sw);
 
-        *dx = 0;
+        *dx = canvas->clipArea.x;
     }
     // Right
-    if(*dx+*sw >= canvas->width) {
+    if(*dx+*sw >= canvas->clipArea.x + canvas->clipArea.w) {
 
-         *sw -= (*dx + *sw) - canvas->width; 
+         *sw -= (*dx + *sw) - (canvas->clipArea.x + canvas->clipArea.w); 
          if(flip)
             *sx += ow-(*sw);
     }
 
     // Top
     oh = *sh;
-    if(*dy < 0) {
+    if(*dy < canvas->clipArea.y) {
 
-        *sh += (*dy);
+        *sh -= canvas->clipArea.y - (*dy);
         *sy += oh-*sh;
-        *dy = 0;
+        *dy = canvas->clipArea.y;
     }
     // Bottom
-    if(*dy+*sh >= canvas->height) {
+    if(*dy+*sh >= canvas->clipArea.y + canvas->clipArea.h) {
 
-        *sh -= (*dy + *sh) - canvas->height;
+        *sh -= (*dy + *sh) - (canvas->clipArea.y + canvas->clipArea.h);
     }
 
     return *sw > 0 && *sh > 0;
@@ -132,6 +170,7 @@ Canvas* new_canvas(u16 width, u16 height) {
     }
 
     c->clippingEnabled = true;
+    c->clipArea = rect_i16(0, 0, 320, 200);
 
     return (Canvas*) c;
 }
@@ -169,6 +208,27 @@ void canvas_copy_to_memory_location(Canvas* _canvas, u32 loc) {
     _Canvas* canvas = (_Canvas*) _canvas;
 
     memcpy((void*)(size_t)loc, canvas->pixels, canvas->width*canvas->height);
+}
+
+
+void canvas_fill_rect(Canvas* _canvas, i16 dx, i16 dy, i16 dw, i16 dh, u8 color) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    u32 dest;
+    i16 y;
+
+    if (canvas->clippingEnabled && 
+        clip_rect(canvas, &dx, &dy, &dw, &dh))
+        return;
+
+    dest = dy * canvas->width + dx;
+
+    for (y = 0; y < dh; ++ y) {
+        
+        memset(canvas->pixels + dest, color, dw);
+        dest += (u32) canvas->width;
+    }
 }
 
 
@@ -264,93 +324,31 @@ void canvas_draw_bitmap(Canvas* canvas, Bitmap* _bmp, i16 dx, i16 dy, bool flip)
 }
 
 
-void canvas_draw_sprite_fast(Canvas* _canvas, SpriteSheet* _sheet,
-    i16 frame, i16 dx, i16 dy, bool flip) {
-
-    _Canvas* canvas = (_Canvas*) _canvas;
-    DirectSpriteSheet* sheet = (DirectSpriteSheet*) sheet;
-
-    u32 dest;
-    u32 src;
-    i16 y;
-
-    // If clipping is enabled, just draw the sprite normally, because
-    // there is no speed benefits anyway
-    if (canvas->clippingEnabled) {
-
-        canvas_draw_bitmap_region_fast(_canvas, sheet->sprites[frame], 
-            0, 0, sheet->width, sheet->height, dx, dy);
-        return;
-    }
-
-    // Otherwise draw things in a slightly faster way
-    
-    dest = dy * canvas->width + dx;
-    src = 0;
-
-    for (y = 0; y < sheet->height; ++ y) {
-        
-        memcpy(canvas->pixels + dest, sheet->sprites[frame]->pixels + src, sheet->width);
-        src += (u32) sheet->width;
-        dest += (u32) canvas->width;
-    }
-}   
-
-
 void canvas_draw_text_fast(Canvas* canvas, Bitmap* _bmp,
     str text, i16 x, i16 y, i16 xoff, i16 yoff, TextAlign align) {
 
-    DirectBitmap* bmp = (DirectBitmap*) _bmp;
-
-    i16 dx, dy;
-
-    i16 charw = bmp->width / 16;
-    i16 charh = charw;
-
-    i16 chr;
-    i16 i = 0;
-
-    i16 sx;
-    i16 sy;
-
-    switch (align) {
-    
-    case ALIGN_RIGHT:
-        x -= strlen(text) * (charw + xoff);
-        break;
-
-    case ALIGN_CENTER:
-        x -= strlen(text) * (charw + xoff) / 2;
-        break;
-    
-    default:
-        break;
-    }
-
-    dx = x;
-    dy = y;
-
-    while ((i16)(chr = text[i ++]) != '\0') {
-
-        if (chr == '\n') {
-
-            dy += charh + yoff;
-            dx = x;
-            continue;
-        }
-
-        sx = chr % 16;
-        sy = chr / 16;
-
-        canvas_draw_bitmap_region_fast(canvas, _bmp, 
-            sx*charw, sy*charh, charw, charh, dx, dy);
-
-        dx += charw + xoff;
-    }
+    TEXT_FUNCTION(canvas_draw_bitmap_region_fast(canvas, _bmp, 
+            sx*charw, sy*charh, charw, charh, dx, dy));
 }
 
 
-void canvas_draw_text(Canvas* canvas, Bitmap* bmp,
+void canvas_draw_text(Canvas* canvas, Bitmap* _bmp,
     str text, i16 x, i16 y, i16 xoff, i16 yoff, TextAlign align) {
 
+    TEXT_FUNCTION(canvas_draw_bitmap_region(canvas, _bmp, 
+            sx*charw, sy*charh, charw, charh, dx, dy, false));
+}
+
+
+void canvas_reset_clip_area(Canvas* canvas) {
+
+    canvas_set_clip_area(canvas, 0, 0, 320, 200);
+}
+
+
+void canvas_set_clip_area(Canvas* _canvas, i16 x, i16 y, i16 w, i16 h) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    canvas->clipArea = rect_i16(x, y, w, h);
 }
