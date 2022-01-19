@@ -15,7 +15,8 @@ typedef struct {
     u16 width;
     u16 height;
 
-    u8* tiles;
+    u8* bottomLayer;
+    u8* topLayer;
     u8* redrawBuffer;
 
 } _Stage;
@@ -44,8 +45,9 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
             dx = left + x*24;
             dy = top + y*20;
 
-            switch (stage->tiles[i]) {
+            switch (stage->bottomLayer[i]) {
 
+            // Tile floor
             case 1:
 
                 canvas_draw_bitmap_region_fast(canvas, staticTiles, 0, 0, 24, 20, dx, dy);
@@ -54,6 +56,55 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
             default:
 
                 canvas_fill_rect(canvas, dx, dy, 24, 20, 0);
+                break;
+            }
+
+            // We set this to zero in the dynamic layer operation
+            // stage->redrawBuffer[i] = 0;
+        }
+
+        if (y >= stage->height)
+            break;
+    }
+}
+
+
+static void draw_dynamic_layer(_Stage* stage, 
+    Canvas* canvas, Bitmap* dynamicTiles,
+    i16 left, i16 top) {
+
+    i16 x, y;
+    i16 i = 0;
+
+    i16 dx, dy;
+
+    i16 tileID;
+
+    for (y = 0; y < stage->maxHeight; ++ y) {
+
+        for (x = 0; x < stage->maxWidth; ++ x) {
+
+            i = y * stage->maxWidth + x;
+
+            if (!stage->redrawBuffer[i] ||
+                x >= stage->width) 
+                continue;
+
+            dx = left + x*24;
+            dy = top + y*20;
+
+            switch (stage->bottomLayer[i]) {
+
+            // Imps
+            case 4:
+            case 5:
+            case 6:
+
+                canvas_draw_bitmap_region(canvas, dynamicTiles, 
+                    0, 0, 24, 20, dx, dy, false);
+                break;
+
+            default:
                 break;
             }
 
@@ -78,8 +129,17 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->maxWidth = maxWidth;
     stage->maxHeight = maxHeight;
 
-    stage->tiles = (u8*) calloc(maxWidth*maxHeight, sizeof(u8));
-    if (stage->tiles == NULL) {
+    stage->bottomLayer = (u8*) calloc(maxWidth*maxHeight, sizeof(u8));
+    if (stage->bottomLayer == NULL) {
+
+        m_memory_error();
+
+        dispose_stage((Stage*) stage);
+        return NULL;
+    }
+
+    stage->topLayer = (u8*) calloc(maxWidth*maxHeight, sizeof(u8));
+    if (stage->topLayer == NULL) {
 
         m_memory_error();
 
@@ -107,7 +167,7 @@ void dispose_stage(Stage* _stage) {
     if (stage == NULL) return;
 
     m_free(stage->redrawBuffer);
-    m_free(stage->tiles);
+    m_free(stage->bottomLayer);
     m_free(stage);
 }
 
@@ -120,7 +180,8 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
     u16 h;
 
     tilemap_get_size(tilemap, &w, &h);
-    tilemap_copy(tilemap, stage->tiles, stage->maxWidth);
+    tilemap_copy(tilemap, stage->bottomLayer, stage->maxWidth);
+    tilemap_copy(tilemap, stage->topLayer, stage->maxWidth);
 
     memset(stage->redrawBuffer, 1, stage->maxWidth*stage->maxHeight);
 
@@ -149,8 +210,7 @@ void stage_draw(Stage* _stage, Canvas* canvas,
     draw_static_layer(stage, canvas, staticTiles, left, top);
 
     canvas_toggle_clipping(canvas, true);
-
-    // TODO: Dynamic layer
+    draw_dynamic_layer(stage, canvas, dynamicTiles, left, top);
 
     canvas_reset_clip_area(canvas);
 }

@@ -10,6 +10,7 @@
 typedef struct {
 
     Bitmap* bmpStaticTiles;
+    Bitmap* bmpDynamicTiles;
     Bitmap* bmpFont;
 
     TilemapPack* baseLevels;
@@ -39,7 +40,7 @@ static void redraw_game(Canvas* canvas) {
         canvas_toggle_clipping(canvas, false);
     }
 
-    stage_draw(game->stage, canvas, game->bmpStaticTiles, NULL);
+    stage_draw(game->stage, canvas, game->bmpStaticTiles, game->bmpDynamicTiles);
 }
 
 
@@ -56,6 +57,7 @@ i16 init_game_scene() {
     printf("Loading...\n");
 
     if ((game->bmpStaticTiles = load_bitmap("STATIC.BIN")) == NULL ||
+        (game->bmpDynamicTiles = load_bitmap("DYNAMIC.BIN")) == NULL ||
         (game->bmpFont = load_bitmap("FONT.BIN")) == NULL ||
         (game->baseLevels = load_tilemap_pack("LEVELS.BIN")) == NULL) {
 
