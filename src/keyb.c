@@ -138,7 +138,7 @@ State keyboard_get_normal_key(u8 key) {
 }
 
 
-State keyboard_get_ext_key(u8 key) {
+State keyboard_get_extended_key(u8 key) {
 
     if(key > KEY_BUFFER_SIZE)
         return STATE_UP;

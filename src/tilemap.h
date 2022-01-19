@@ -20,7 +20,7 @@ u8 tilemap_get_tile(Tilemap* tilemap, i16 x, i16 y, u8 def);
 void tilemap_get_size(Tilemap* tilemap, u16* width, u16* height);
 
 // Note: buffer here must be already allocated
-void tilemap_copy(Tilemap* tilemap, u8* buffer, u16 offset);
+void tilemap_copy(Tilemap* tilemap, u8* buffer);
 
 
 #endif // PROJECTNAME_TILEMAP_H

@@ -26,6 +26,8 @@ static Game* game = NULL;
 
 static i16 update_game(i16 step) {
 
+    stage_update(game->stage, step);
+
     return 0;
 }
 

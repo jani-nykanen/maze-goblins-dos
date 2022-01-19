@@ -154,7 +154,7 @@ void tilemap_get_size(Tilemap* _tilemap, u16* width, u16* height) {
 }
 
 
-void tilemap_copy(Tilemap* _tilemap, u8* buffer, u16 offset) {
+void tilemap_copy(Tilemap* _tilemap, u8* buffer) {
 
     _Tilemap* tilemap = (_Tilemap*) _tilemap;
 
@@ -164,7 +164,7 @@ void tilemap_copy(Tilemap* _tilemap, u8* buffer, u16 offset) {
 
         for (x = 0; x < tilemap->width; ++ x) {
 
-            buffer[y * offset + x] = tilemap->data[y * tilemap->width + x];
+            buffer[y * tilemap->width + x] = tilemap->data[y * tilemap->width + x];
         }
     }
 }
