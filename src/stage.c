@@ -46,7 +46,7 @@ typedef struct {
 
     i16 animationTimer;
 
-    Point_i16 animDir;
+    i16 animDir;
 
 } _Stage;
 
@@ -150,6 +150,8 @@ static void draw_dynamic_layer(_Stage* stage,
     Canvas* canvas, Bitmap* dynamicTiles,
     i16 left, i16 top) {
 
+    static const i16 PLAYER_FRAME[] = {2, 1, 2, 0};
+
     i16 x, y;
     i16 i = 0;
 
@@ -158,10 +160,12 @@ static void draw_dynamic_layer(_Stage* stage,
     i16 shiftx = 0;
     i16 shifty = 0;
 
+    i16 frame;
+
     if (stage->animationTimer > 0) {
 
-        shiftx = -stage->animationTimer/10 * stage->animDir.x;
-        shifty = -stage->animationTimer/12 * stage->animDir.y;
+        shiftx = -stage->animationTimer/10 * DIR_X[stage->animDir];
+        shifty = -stage->animationTimer/12 * DIR_Y[stage->animDir];
     }
 
     for (y = 0; y < stage->height; ++ y) {
@@ -180,8 +184,10 @@ static void draw_dynamic_layer(_Stage* stage,
 
             // Player
             case 2:
+
+                frame = PLAYER_FRAME[stage->animDir];
                 canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    0, 0, 24, 20, dx, dy, false);
+                    frame*24, 0, 24, 20, dx, dy, stage->animDir == 2);
                 break;
 
             // Imps
@@ -336,10 +342,24 @@ static void control(_Stage* stage) {
     if (check_movement(stage, a)) {
 
         stage->animationTimer = ANIMATION_TIME;
-
-        stage->animDir.x = DIR_X[a-1];
-        stage->animDir.y = DIR_Y[a-1];
+        stage->animDir = a-1;
     }
+}
+
+
+static bool check_connections(_Stage* stage) {
+
+    i16 x, y;
+
+    for (y = 0; y < stage->height; ++ y) {
+
+        for (x = 0; x < stage->width; ++ x) {
+
+            // TODO: This thing
+        }
+    }
+
+    return false;
 }
 
 
@@ -403,6 +423,7 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->undoCount = 0;
 
     stage->animationTimer = 0;
+    stage->animDir = 3;
 
     return (Stage*) stage;
 }
