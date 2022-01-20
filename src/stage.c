@@ -132,6 +132,12 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
                 canvas_draw_bitmap_region_fast(canvas, staticTiles, 0, 0, 24, 20, dx, dy);
                 break;
 
+            // Star
+            case 8:
+
+                canvas_draw_bitmap_region_fast(canvas, staticTiles, 48, 0, 24, 20, dx, dy);
+                break;
+
             // Pure darkness
             default:
 
@@ -167,8 +173,8 @@ static void draw_dynamic_layer(_Stage* stage,
 
     if (stage->animationTimer > 0 && !stage->destroying) {
 
-        shiftx = -stage->animationTimer/10 * DIR_X[stage->animDir];
-        shifty = -stage->animationTimer/12 * DIR_Y[stage->animDir];
+        shiftx = -round_i16(stage->animationTimer, 10) * DIR_X[stage->animDir];
+        shifty = -round_i16(stage->animationTimer, 12) * DIR_Y[stage->animDir];
     }
 
     for (y = 0; y < stage->height; ++ y) {
@@ -259,7 +265,7 @@ static bool is_free_tile_in_direction(_Stage* stage, i16 dx, i16 dy, i16 dirx, i
         top = stage->topLayerBuffer[stage->bufferPointer][i];
         bottom = stage->bottomLayerBuffer[stage->bufferPointer][i];
 
-        if (bottom == 1 && bottom != 9 && bottom != 11)
+        if (bottom > 0 && bottom != 9 && bottom != 11)
             return false;
 
         if (top == 0 && (bottom == 0 || bottom != 9 || bottom != 11))
@@ -323,9 +329,42 @@ static bool check_movement(_Stage* stage, Action a) {
 }
 
 
+static void undo(_Stage* stage) {
+
+    if (stage->undoCount == 0) return;
+
+    if (stage->bufferPointer == 0) {
+
+        stage->bufferPointer = stage->bufferSize-1;
+    }
+    else {
+
+        -- stage->bufferPointer;
+    }
+
+    memcpy(stage->bottomLayer, 
+        stage->bottomLayerBuffer[stage->bufferPointer], 
+        stage->width*stage->height);
+    memcpy(stage->topLayer, 
+        stage->topLayerBuffer[stage->bufferPointer], 
+        stage->width*stage->height);
+
+    memset(stage->redrawBuffer, 1, stage->width*stage->height);
+
+    -- stage->undoCount;
+}
+
+
 static void control(_Stage* stage) {
 
     Action a = ACTION_NONE;
+
+    if (keyboard_get_normal_key(KEY_Z) == STATE_PRESSED ||
+        keyboard_get_normal_key(KEY_BACKSPACE) == STATE_PRESSED) {
+
+        undo(stage);
+        return;
+    }
 
     if (keyboard_get_extended_key(KEY_RIGHT) & STATE_DOWN_OR_PRESSED) {
 
@@ -449,9 +488,48 @@ static void clear_destroyed_objects(_Stage* stage) {
 }
 
 
+static void update_animation(_Stage* stage, i16 step) {
+
+    const i16 ANIM_SPEED = 24;
+
+    bool cloneBuffer = true;
+
+    stage->animationTimer -= ANIM_SPEED * step;
+    if (stage->animationTimer <= 0) {
+
+        if (stage->destroying) {
+
+            clear_destroyed_objects(stage);
+            stage->destroying = false;
+        }
+
+        if (stage->nonPlayerMoved && !stage->destroying) {
+
+            stage->destroying = check_connections(stage);
+            if (stage->destroying) {
+
+                stage->animationTimer = ANIMATION_TIME;
+                cloneBuffer = false;
+            }
+        }
+
+        if (cloneBuffer) {
+
+            stage->bufferPointer = (stage->bufferPointer + 1) % (stage->bufferSize);
+            stage->undoCount = min_i16(stage->bufferSize-1, stage->undoCount+1);
+
+            memcpy(stage->bottomLayerBuffer[stage->bufferPointer], 
+                stage->bottomLayer, stage->width*stage->height);
+            memcpy(stage->topLayerBuffer[stage->bufferPointer], 
+                stage->topLayer, stage->width*stage->height);
+        }
+    }
+}
+
+
 Stage* new_stage(u16 maxWidth, u16 maxHeight) {
 
-    const BUFFER_MAX_COUNT = 8;
+    const BUFFER_MAX_COUNT = 11;
 
     _Stage* stage = (_Stage*) calloc(1, sizeof(_Stage));
     if (stage == NULL) {
@@ -584,43 +662,16 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
 
 void stage_update(Stage* _stage, i16 step) {
 
-    const i16 ANIM_SPEED = 24;
-
     _Stage* stage = (_Stage*) _stage;
 
     if (stage->animationTimer > 0) {
 
-        stage->animationTimer -= ANIM_SPEED * step;
-        if (stage->animationTimer <= 0) {
-
-            if (stage->destroying) {
-
-                clear_destroyed_objects(stage);
-                stage->destroying = false;
-            }
-
-            stage->bufferPointer = (stage->bufferPointer + 1) % (stage->bufferSize);
-            stage->undoCount = min_i16(stage->bufferSize-1, stage->undoCount+1);
-
-            memcpy(stage->bottomLayerBuffer[stage->bufferPointer], 
-                stage->bottomLayer, stage->width*stage->height);
-            memcpy(stage->topLayerBuffer[stage->bufferPointer], 
-                stage->topLayer, stage->width*stage->height);
-
-            if (stage->nonPlayerMoved && !stage->destroying) {
-
-                stage->destroying = check_connections(stage);
-                if (stage->destroying) {
-
-                    stage->animationTimer = ANIMATION_TIME;
-                }
-            }
-        }
-
-        return;
+        update_animation(stage, step);
     }
+    else {
 
-    control(stage);
+        control(stage);
+    }
 }
 
 

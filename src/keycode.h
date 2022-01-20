@@ -24,6 +24,7 @@ typedef enum {
     KEY_E = 18,
     KEY_R = 19,
     KEY_P = 25,
+    KEY_Z = 44,
 
     KEY_RETURN = 28
 

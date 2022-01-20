@@ -70,7 +70,6 @@ static void far interrupt handler() {
             anyPressed = makeBreak;
             normalRead[scancode] = false;
         }
-        
     }
     outp(0x20, 0x20);
 }
