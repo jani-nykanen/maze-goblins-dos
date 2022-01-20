@@ -11,6 +11,7 @@
 
 // This need to be divisible by both 24 and 20!
 static const i16 ANIMATION_TIME = 240;
+static const i16 DESTROY_TIME = 480;
 static const i16 DIR_X[] = {1, 0, -1, 0};
 static const i16 DIR_Y[] = {0, -1, 0, 1};
 
@@ -160,6 +161,8 @@ static void draw_dynamic_layer(_Stage* stage,
     i16 left, i16 top) {
 
     static const i16 PLAYER_FRAME[] = {2, 1, 2, 0};
+    static const i16 IMP_FRAME[] = {0, 1, 0, 2, 0};
+    static const i16 FRAME_TIME = 120;
 
     i16 x, y;
     i16 i = 0;
@@ -204,8 +207,21 @@ static void draw_dynamic_layer(_Stage* stage,
             case 5:
             case 6:
 
+                frame = stage->animationTimer / FRAME_TIME;
+                if (x % 2 == y % 2)
+                    frame += 2;
+
                 canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    0, 20, 24, 20, dx, dy, false);
+                    IMP_FRAME[frame]*24, 20, 24, 20, dx, dy, false);
+                break;
+
+            // Dying imp
+            case 127:
+
+                frame = max_i16(0, 3 - stage->animationTimer / (DESTROY_TIME/4));
+                canvas_draw_bitmap_region(canvas, dynamicTiles, 
+                    frame*24, 40, 24, 20, dx, dy, false);
+
                 break;
 
             default:
@@ -252,7 +268,8 @@ static bool is_player_in_direction(_Stage* stage, i16 dx, i16 dy, i16 dirx, i16 
 }
 
 
-static bool is_free_tile_in_direction(_Stage* stage, i16 dx, i16 dy, i16 dirx, i16 diry) {
+static bool is_free_tile_in_direction(_Stage* stage, 
+    i16 dx, i16 dy, i16 dirx, i16 diry, bool isPlayer) {
 
     u8 top;
     u8 bottom;
@@ -265,14 +282,18 @@ static bool is_free_tile_in_direction(_Stage* stage, i16 dx, i16 dy, i16 dirx, i
         top = stage->topLayerBuffer[stage->bufferPointer][i];
         bottom = stage->bottomLayerBuffer[stage->bufferPointer][i];
 
-        if (bottom > 0 && bottom != 9 && bottom != 11)
+        if (bottom > 0 && bottom != 9 && bottom != 11 && (!isPlayer || bottom != 8))
             return false;
 
-        if (top == 0 && (bottom == 0 || bottom != 9 || bottom != 11))
+        if (top == 0 && 
+            (bottom == 0 || bottom == 9 || bottom == 11 || 
+            (isPlayer && isPlayer && bottom == 8)))
             return true;
 
         dx += dirx;
         dy += diry;
+
+        isPlayer = false;
     }
     while (dx >= 0 && dy >= 0 && dx < stage->width && dy < stage->height);
 
@@ -307,7 +328,7 @@ static bool check_movement(_Stage* stage, Action a) {
 
             if (is_player_in_direction(stage, x, y, -dirx, -diry)) {
 
-                if (is_free_tile_in_direction(stage, x + dirx, y + diry, dirx, diry)) {
+                if (is_free_tile_in_direction(stage, x + dirx, y + diry, dirx, diry, id == 2)) {
 
                     targetIndex = (y + diry)*stage->width + x + dirx;
 
@@ -508,7 +529,7 @@ static void update_animation(_Stage* stage, i16 step) {
             stage->destroying = check_connections(stage);
             if (stage->destroying) {
 
-                stage->animationTimer = ANIMATION_TIME;
+                stage->animationTimer = DESTROY_TIME;
                 cloneBuffer = false;
             }
         }
