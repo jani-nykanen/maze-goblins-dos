@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 
 // This need to be divisible by both 24 and 20!
@@ -37,6 +38,7 @@ typedef struct {
     u8* bottomLayer;
     u8* topLayer;
     u8* redrawBuffer;
+    u8* connectionBuffer;
 
     u8** bottomLayerBuffer;
     u8** topLayerBuffer;
@@ -45,8 +47,9 @@ typedef struct {
     u16 undoCount;
 
     i16 animationTimer;
-
     i16 animDir;
+    bool nonPlayerMoved;
+    bool destroying;
 
 } _Stage;
 
@@ -162,7 +165,7 @@ static void draw_dynamic_layer(_Stage* stage,
 
     i16 frame;
 
-    if (stage->animationTimer > 0) {
+    if (stage->animationTimer > 0 && !stage->destroying) {
 
         shiftx = -stage->animationTimer/10 * DIR_X[stage->animDir];
         shifty = -stage->animationTimer/12 * DIR_Y[stage->animDir];
@@ -285,6 +288,8 @@ static bool check_movement(_Stage* stage, Action a) {
 
     bool ret = false;
 
+    stage->nonPlayerMoved = false;
+
     for (y = 0; y < stage->height; ++ y) {
 
         for (x = 0; x < stage->width; ++ x) {
@@ -306,6 +311,8 @@ static bool check_movement(_Stage* stage, Action a) {
                     stage->topLayer[targetIndex] = id;
                     if (id == 2)
                         stage->topLayer[currentIndex] = 0;
+                    else
+                        stage->nonPlayerMoved = true;
 
                     ret = true;
                 }
@@ -347,19 +354,98 @@ static void control(_Stage* stage) {
 }
 
 
+static u8 get_upper_tile(_Stage* stage, i16 x, i16 y) {
+
+    if (x < 0 || y < 0 || x >= stage->width || y >= stage->height)
+        return 0;
+
+    return stage->topLayer[y * stage->width + x];
+}
+
+
 static bool check_connections(_Stage* stage) {
 
+    static const i16 MIN_CONNECTION = 2;
+
     i16 x, y;
+    u8 id;
+    i16 i, j;
+    i16 k, l;
+    i16 round;
 
-    for (y = 0; y < stage->height; ++ y) {
+    bool ret = false;
 
-        for (x = 0; x < stage->width; ++ x) {
+    memset(stage->connectionBuffer, 0, stage->width*stage->height);
 
-            // TODO: This thing
+    // Step 1: mark connections
+    // TODO: Maybe a few too many nested for loops...?
+    for (round = 0; round < 2; ++ round) {
+
+        for (y = 0; y < stage->height; ++ y) {
+
+            for (x = 0; x < stage->width; ++ x) {
+
+                i = y*stage->width + x;
+                id = stage->topLayer[i];
+                if (id < 4 || id > 7)
+                    continue;
+
+                // TODO: Optimize with a lookup table?
+                for (l = -1; l <= 1; ++ l) {
+
+                    for (k = -1; k <= 1; ++ k) {
+
+                        if (abs(k) == abs(l))
+                            continue;
+
+                        j = (y+l)*stage->width + x + k;
+                        if (get_upper_tile(stage, x+k, y+l) == id) {
+
+                            if (round == 0) {
+
+                                ++ stage->connectionBuffer[i];
+                            }
+                            else {
+
+                                stage->connectionBuffer[i] = max_i16(stage->connectionBuffer[i], stage->connectionBuffer[j]);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    return false;
+    // Step 2: check things to destroy
+    for (i = 0; i < stage->width*stage->height; ++ i) {
+
+        if (stage->connectionBuffer[i] >= MIN_CONNECTION) {
+
+            stage->topLayer[i] = 127;
+            stage->redrawBuffer[i] = true;
+            ret = true;
+        }
+
+        // Mark players for redraw
+        if (stage->topLayer[i] == 2)
+            stage->redrawBuffer[i] = true;
+    }
+
+    return ret;
+}
+
+
+static void clear_destroyed_objects(_Stage* stage) {
+
+    i16 i;
+
+    for (i = 0; i < stage->width*stage->height; ++ i) {
+
+        if (stage->topLayer[i] == 127) {
+
+            stage->topLayer[i] = 0;
+        }
+    }
 }
 
 
@@ -404,6 +490,15 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
         return NULL;
     }
 
+    stage->connectionBuffer = (u8*) calloc(maxWidth*maxHeight, sizeof(u8));
+    if (stage->connectionBuffer == NULL) {
+
+        m_memory_error();
+
+        dispose_stage((Stage*) stage);
+        return NULL;
+    }
+
     stage->bottomLayerBuffer = allocate_u8_array_buffer(maxWidth*maxHeight, BUFFER_MAX_COUNT);
     if (stage->bottomLayerBuffer == NULL) {
 
@@ -424,6 +519,8 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
 
     stage->animationTimer = 0;
     stage->animDir = 3;
+    stage->nonPlayerMoved = false;
+    stage->destroying = false;
 
     return (Stage*) stage;
 }
@@ -447,6 +544,8 @@ void dispose_stage(Stage* _stage) {
 
     m_free(stage->redrawBuffer);
     m_free(stage->bottomLayer);
+    m_free(stage->topLayer);
+    m_free(stage->connectionBuffer);
     m_free(stage);
 }
 
@@ -494,6 +593,12 @@ void stage_update(Stage* _stage, i16 step) {
         stage->animationTimer -= ANIM_SPEED * step;
         if (stage->animationTimer <= 0) {
 
+            if (stage->destroying) {
+
+                clear_destroyed_objects(stage);
+                stage->destroying = false;
+            }
+
             stage->bufferPointer = (stage->bufferPointer + 1) % (stage->bufferSize);
             stage->undoCount = min_i16(stage->bufferSize-1, stage->undoCount+1);
 
@@ -501,6 +606,15 @@ void stage_update(Stage* _stage, i16 step) {
                 stage->bottomLayer, stage->width*stage->height);
             memcpy(stage->topLayerBuffer[stage->bufferPointer], 
                 stage->topLayer, stage->width*stage->height);
+
+            if (stage->nonPlayerMoved && !stage->destroying) {
+
+                stage->destroying = check_connections(stage);
+                if (stage->destroying) {
+
+                    stage->animationTimer = ANIMATION_TIME;
+                }
+            }
         }
 
         return;
