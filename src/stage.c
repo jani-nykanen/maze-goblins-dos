@@ -15,6 +15,25 @@ static const i16 DESTROY_TIME = 480;
 static const i16 DIR_X[] = {1, 0, -1, 0};
 static const i16 DIR_Y[] = {0, -1, 0, 1};
 
+static const BUFFER_MAX_COUNT = 33;
+
+static i16 FIBONACCI[90];
+
+
+static void compute_fibonacci() {
+
+    const i16 MAX = 251;
+
+    i16 i;
+    FIBONACCI[0] = 1;
+    FIBONACCI[1] = 1;
+
+    for (i = 2; i < 90; ++ i) {
+
+        FIBONACCI[i] = (FIBONACCI[i-2] + FIBONACCI[i-1]) % MAX;
+    }
+}
+
 
 typedef enum {
 
@@ -51,6 +70,8 @@ typedef struct {
     i16 animDir;
     bool nonPlayerMoved;
     bool destroying;
+
+    Tilemap* baseMap;
 
 } _Stage;
 
@@ -112,6 +133,7 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
     i16 i = 0;
 
     i16 dx, dy;
+    i16 frame;
 
     for (y = 0; y < stage->height; ++ y) {
 
@@ -142,7 +164,13 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
             // Pure darkness
             default:
 
-                canvas_fill_rect(canvas, dx, dy, 24, 20, 0);
+                frame = (FIBONACCI[i % 90]) % 4;
+                if (frame == 0)
+                    canvas_fill_rect(canvas, dx, dy, 24, 20, 0);
+                else
+                    canvas_draw_bitmap_region_fast(canvas, staticTiles, 
+                        (frame-1)*24, 40, 24, 20, dx, dy);
+
                 break;
             }
 
@@ -173,6 +201,7 @@ static void draw_dynamic_layer(_Stage* stage,
     i16 shifty = 0;
 
     i16 frame;
+    i16 id;
 
     if (stage->animationTimer > 0 && !stage->destroying) {
 
@@ -192,7 +221,8 @@ static void draw_dynamic_layer(_Stage* stage,
             dx = left + x*24 + shiftx;
             dy = top + y*20 + shifty;
 
-            switch (stage->topLayer[i]) {
+            id = stage->topLayer[i];
+            switch (id) {
 
             // Player
             case 2:
@@ -200,6 +230,12 @@ static void draw_dynamic_layer(_Stage* stage,
                 frame = PLAYER_FRAME[stage->animDir];
                 canvas_draw_bitmap_region(canvas, dynamicTiles, 
                     frame*24, 0, 24, 20, dx, dy, stage->animDir == 2);
+                break;
+
+            // Rock
+            case 3:
+                canvas_draw_bitmap_region(canvas, dynamicTiles, 
+                    72, 0, 24, 20, dx, dy, false);
                 break;
 
             // Imps
@@ -212,7 +248,8 @@ static void draw_dynamic_layer(_Stage* stage,
                     frame += 2;
 
                 canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    IMP_FRAME[frame]*24, 20, 24, 20, dx, dy, false);
+                    IMP_FRAME[frame]*24, 20 + 20 * (id-4), 
+                    24, 20, dx, dy, false);
                 break;
 
             // Dying imp
@@ -220,7 +257,7 @@ static void draw_dynamic_layer(_Stage* stage,
 
                 frame = max_i16(0, 3 - stage->animationTimer / (DESTROY_TIME/4));
                 canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    frame*24, 40, 24, 20, dx, dy, false);
+                    frame*24, 60, 24, 20, dx, dy, false);
 
                 break;
 
@@ -423,75 +460,102 @@ static u8 get_upper_tile(_Stage* stage, i16 x, i16 y) {
 }
 
 
-static bool check_connections(_Stage* stage) {
+static u8 get_connection_count(_Stage* stage, i16 x, i16 y) {
+
+    if (x < 0 || y < 0 || x >= stage->width || y >= stage->height)
+        return 0;
+
+    return stage->connectionBuffer[y * stage->width + x];
+}
+
+
+static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 
     static const i16 MIN_CONNECTION = 2;
 
     i16 x, y;
     u8 id;
-    i16 i, j;
-    i16 k, l;
-    i16 round;
+    i16 i, j, k;
 
-    bool ret = false;
+    bool destroy = false;
 
     memset(stage->connectionBuffer, 0, stage->width*stage->height);
 
-    // Step 1: mark connections
-    // TODO: Maybe a few too many nested for loops...?
-    for (round = 0; round < 2; ++ round) {
+    // Step 1: mark connections & check things under the player
+    for (y = 0; y < stage->height; ++ y) {
 
-        for (y = 0; y < stage->height; ++ y) {
+        for (x = 0; x < stage->width; ++ x) {
 
-            for (x = 0; x < stage->width; ++ x) {
+            i = y*stage->width + x;
+            id = stage->topLayer[i];
 
-                i = y*stage->width + x;
-                id = stage->topLayer[i];
-                if (id < 4 || id > 7)
-                    continue;
+            if (id == 2) {
 
-                // TODO: Optimize with a lookup table?
-                for (l = -1; l <= 1; ++ l) {
+                if (stage->bottomLayer[i] == 8) {
 
-                    for (k = -1; k <= 1; ++ k) {
+                    stage->bottomLayer[i] = 0;
+                }
+                continue;
+            }
 
-                        if (abs(k) == abs(l))
-                            continue;
+            if (!nonPlayerMoved || id < 4 || id > 7)
+                continue;
 
-                        j = (y+l)*stage->width + x + k;
-                        if (get_upper_tile(stage, x+k, y+l) == id) {
+            for (k = 0; k < 4; ++ k) {
 
-                            if (round == 0) {
+                j = (y + DIR_Y[k])*stage->width + x + DIR_X[k];
+                if (get_upper_tile(stage, x+DIR_X[k], y+DIR_Y[k]) == id) {
 
-                                ++ stage->connectionBuffer[i];
-                            }
-                            else {
+                    if ((++ stage->connectionBuffer[i]) >= MIN_CONNECTION) {
 
-                                stage->connectionBuffer[i] = max_i16(stage->connectionBuffer[i], stage->connectionBuffer[j]);
-                            }
-                        }
+                        destroy = true;
                     }
                 }
             }
         }
     }
 
+    if (!nonPlayerMoved)
+        return false;
+
     // Step 2: check things to destroy
-    for (i = 0; i < stage->width*stage->height; ++ i) {
+    for (y = 0; y < stage->height; ++ y) {
 
-        if (stage->connectionBuffer[i] >= MIN_CONNECTION) {
+        for (x = 0; x < stage->width; ++ x) {
 
-            stage->topLayer[i] = 127;
-            stage->redrawBuffer[i] = true;
-            ret = true;
+            i = y*stage->width + x;
+
+            if (stage->connectionBuffer[i] > 0) {
+
+                if (stage->connectionBuffer[i] >= MIN_CONNECTION) {
+
+                    stage->topLayer[i] = 127;
+                    stage->redrawBuffer[i] = true;
+                }
+                else {
+
+                    for (k = 0; k < 4; ++ k) {
+
+                        j = (y + DIR_Y[k])*stage->width + x + DIR_X[k];
+                        if (get_connection_count(stage, x+DIR_X[k], y+DIR_Y[k]) >= MIN_CONNECTION) {
+
+                            stage->topLayer[i] = 127;
+                            stage->redrawBuffer[i] = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Mark player(s) for redraw
+            if (destroy && stage->topLayer[i] == 2) {
+                
+                stage->redrawBuffer[i] = true;
+            }
         }
-
-        // Mark players for redraw
-        if (stage->topLayer[i] == 2)
-            stage->redrawBuffer[i] = true;
     }
 
-    return ret;
+    return destroy;
 }
 
 
@@ -506,6 +570,18 @@ static void clear_destroyed_objects(_Stage* stage) {
             stage->topLayer[i] = 0;
         }
     }
+}
+
+
+static void store_state(_Stage* stage) {
+
+    stage->bufferPointer = (stage->bufferPointer + 1) % (stage->bufferSize);
+    stage->undoCount = min_i16(stage->bufferSize-1, stage->undoCount+1);
+
+    memcpy(stage->bottomLayerBuffer[stage->bufferPointer], 
+        stage->bottomLayer, stage->width*stage->height);
+    memcpy(stage->topLayerBuffer[stage->bufferPointer], 
+        stage->topLayer, stage->width*stage->height);
 }
 
 
@@ -524,10 +600,10 @@ static void update_animation(_Stage* stage, i16 step) {
             stage->destroying = false;
         }
 
-        if (stage->nonPlayerMoved && !stage->destroying) {
+        if (!stage->destroying) {
 
-            stage->destroying = check_connections(stage);
-            if (stage->destroying) {
+            stage->destroying = check_effects(stage, stage->nonPlayerMoved);
+            if (stage->nonPlayerMoved && stage->destroying) {
 
                 stage->animationTimer = DESTROY_TIME;
                 cloneBuffer = false;
@@ -536,21 +612,19 @@ static void update_animation(_Stage* stage, i16 step) {
 
         if (cloneBuffer) {
 
-            stage->bufferPointer = (stage->bufferPointer + 1) % (stage->bufferSize);
-            stage->undoCount = min_i16(stage->bufferSize-1, stage->undoCount+1);
-
-            memcpy(stage->bottomLayerBuffer[stage->bufferPointer], 
-                stage->bottomLayer, stage->width*stage->height);
-            memcpy(stage->topLayerBuffer[stage->bufferPointer], 
-                stage->topLayer, stage->width*stage->height);
+            store_state(stage);
         }
     }
 }
 
 
-Stage* new_stage(u16 maxWidth, u16 maxHeight) {
+void init_stage() {
 
-    const BUFFER_MAX_COUNT = 11;
+    compute_fibonacci();
+}
+
+
+Stage* new_stage(u16 maxWidth, u16 maxHeight) {
 
     _Stage* stage = (_Stage*) calloc(1, sizeof(_Stage));
     if (stage == NULL) {
@@ -621,6 +695,8 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->nonPlayerMoved = false;
     stage->destroying = false;
 
+    stage->baseMap = NULL;
+
     return (Stage*) stage;
 }
 
@@ -678,6 +754,8 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
     memcpy(stage->topLayerBuffer[0], stage->topLayer, stage->width*stage->height);
 
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
+
+    stage->baseMap = tilemap;
 }
 
 
@@ -713,4 +791,27 @@ void stage_draw(Stage* _stage, Canvas* canvas,
     draw_dynamic_layer(stage, canvas, dynamicTiles, left, top);
 
     canvas_reset_clip_area(canvas);
+}
+
+
+void stage_get_size(Stage* _stage, i16* width, i16* height) {
+
+    _Stage* stage = (_Stage*) _stage;
+
+    *width = stage->width;
+    *height = stage->height;
+}
+
+
+bool stage_reset(Stage* _stage) {
+
+    _Stage* stage = (_Stage*) _stage;
+
+    if (stage->animationTimer > 0)
+        return false;
+
+    stage_init_tilemap(_stage, stage->baseMap);
+    memset(stage->redrawBuffer, 1, stage->width*stage->height);
+
+    return true;
 }
