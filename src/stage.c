@@ -12,6 +12,7 @@
 // This need to be divisible by both 24 and 20!
 static const i16 ANIMATION_TIME = 240;
 static const i16 DESTROY_TIME = 480;
+static const i16 TOGGLE_TIME = 240;
 static const i16 DIR_X[] = {1, 0, -1, 0};
 static const i16 DIR_Y[] = {0, -1, 0, 1};
 
@@ -49,6 +50,26 @@ typedef enum {
 } Action;
 
 
+typedef enum {
+
+    ANIMATION_MOVE = 0,
+    ANIMATION_DESTROY = 1,
+    ANIMATION_TOGGLE_WALLS = 2
+
+} AnimationType;
+
+
+typedef struct {
+
+    i16 x;
+    i16 y;
+    i16 timer;
+    i16 time;
+    bool exist;
+
+} Dust;
+
+
 typedef struct {
 
     u16 maxWidth;
@@ -74,7 +95,10 @@ typedef struct {
     i16 animationTimer;
     i16 animDir;
     bool nonPlayerMoved;
-    bool destroying;
+    AnimationType animType;
+
+    Dust* dust;
+    u16 dustCount;
 
     Tilemap* baseMap;
 
@@ -128,6 +152,35 @@ static void filter_array(u8* arr, const u8* filter, u16 arrLen, u16 filterLen) {
             }
         }
     }
+}
+
+
+static void update_dust_particle(Dust* d, _Stage* stage, i16 step) {
+
+    if (!d->exist) return;
+
+    stage->redrawBuffer[d->y * stage->width + d->x] = true;
+
+    if ((d->timer -= step) <= 0) {
+
+        d->exist = false;
+        return;
+    }
+}
+
+
+static void draw_dust(Dust* d, Canvas* canvas, Bitmap* dynamicTiles, i16 left, i16 top) {
+
+    i16 frame;
+
+    if (!d->exist) return;
+
+    frame = max_i16(0, 3 - (d->timer / (d->time/4)) );
+
+    canvas_draw_bitmap_region(canvas, dynamicTiles, 
+        frame*24, 120, 24, 20, 
+        left + d->x*24,
+        top + d->y*20, false);
 }
 
 
@@ -214,7 +267,7 @@ static void draw_moving_object(_Stage* stage,
     static const i16 IMP_FRAME[] = {0, 1, 0, 2, 0};
     static const i16 FRAME_TIME = 120;
 
-    i16 frame;
+    i16 frame = 0;
 
     switch (id) {
 
@@ -238,9 +291,16 @@ static void draw_moving_object(_Stage* stage,
     case 6:
     case 7:
 
-        frame = stage->animationTimer / FRAME_TIME;
-        if (x % 2 == y % 2)
-            frame += 2;
+        if (stage->animType == ANIMATION_MOVE) {
+
+            frame = stage->animationTimer / FRAME_TIME;
+            if (x % 2 == y % 2)
+                frame += 2;
+        }
+        else {
+
+            frame = 0;
+        }
 
         canvas_draw_bitmap_region(canvas, dynamicTiles, 
             IMP_FRAME[frame]*24, 20 + 20 * (id-4), 
@@ -276,7 +336,7 @@ static void draw_dynamic_layer(_Stage* stage,
 
     i16 id;
 
-    if (stage->animationTimer > 0 && !stage->destroying) {
+    if (stage->animationTimer > 0 && stage->animType == ANIMATION_MOVE) {
 
         shiftx = -round_i16(stage->animationTimer, 10) * DIR_X[stage->animDir];
         shifty = -round_i16(stage->animationTimer, 12) * DIR_Y[stage->animDir];
@@ -406,6 +466,29 @@ static bool is_free_tile_in_direction(_Stage* stage,
 }
 
 
+static void spawn_dust_particle(_Stage* stage, i16 x, i16 y) {
+    
+    const DUST_TIME = 24;
+
+    i16 i;
+
+    for (i = 0; i < stage->dustCount; ++ i) {
+
+        if (!stage->dust[i].exist) {
+
+            stage->dust[i].x = x;
+            stage->dust[i].y = y;
+            stage->dust[i].time = DUST_TIME;
+            stage->dust[i].timer = stage->dust[i].time;
+
+            stage->dust[i].exist = true;
+
+            break;
+        }
+    }
+}
+
+
 static bool check_movement(_Stage* stage, Action a) {
 
     i16 x, y;
@@ -446,10 +529,15 @@ static bool check_movement(_Stage* stage, Action a) {
                     stage->redrawBuffer[targetIndex] = true;
 
                     stage->topLayer[targetIndex] = id;
-                    if (id == 2)
+                    if (id == 2) {
+
                         stage->topLayer[currentIndex] = 0;
-                    else
+                        spawn_dust_particle(stage, x, y);
+                    }
+                    else {
+
                         stage->nonPlayerMoved = true;
+                    }
 
                     ret = true;
                 }
@@ -520,6 +608,7 @@ static void control(_Stage* stage) {
 
     if (check_movement(stage, a)) {
 
+        stage->animType = ANIMATION_MOVE;
         stage->animationTimer = ANIMATION_TIME;
         stage->animDir = a-1;
     }
@@ -658,12 +747,19 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
         }
     }
 
+    if (destroy) {
+
+        return ANIMATION_DESTROY;
+    }
+
     if (buttonWithoutObject == stage->wallState) {
 
         stage->wallState = !stage->wallState;
+        return ANIMATION_TOGGLE_WALLS;
     }
 
-    return destroy;
+    // Well, actually no animation at all!
+    return ANIMATION_MOVE;
 }
 
 
@@ -704,18 +800,24 @@ static void update_animation(_Stage* stage, i16 step) {
     stage->animationTimer -= ANIM_SPEED * step;
     if (stage->animationTimer <= 0) {
 
-        if (stage->destroying) {
+        if (stage->animType == ANIMATION_DESTROY) {
 
             clear_destroyed_objects(stage);
-            stage->destroying = false;
         }
 
-        if (!stage->destroying) {
+        if (stage->animType == ANIMATION_MOVE) {
 
-            stage->destroying = check_effects(stage, stage->nonPlayerMoved);
-            if (stage->nonPlayerMoved && stage->destroying) {
+            stage->animType = check_effects(stage, stage->nonPlayerMoved);
+  
+            if (stage->nonPlayerMoved &&
+                stage->animType == ANIMATION_DESTROY) {
 
                 stage->animationTimer = DESTROY_TIME;
+                cloneBuffer = false;
+            }
+            else if (stage->animType == ANIMATION_TOGGLE_WALLS) {
+
+                stage->animationTimer = TOGGLE_TIME;
                 cloneBuffer = false;
             }
         }
@@ -735,6 +837,8 @@ void init_stage() {
 
 
 Stage* new_stage(u16 maxWidth, u16 maxHeight) {
+
+    const u16 MAX_DUST_COUNT = 3;
 
     _Stage* stage = (_Stage*) calloc(1, sizeof(_Stage));
     if (stage == NULL) {
@@ -799,9 +903,21 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->wallStateBuffer = (bool*) calloc(maxWidth*maxHeight, sizeof(bool));
     if (stage->wallStateBuffer == NULL) {
 
+        m_memory_error();
+
         dispose_stage((Stage*) stage);
         return NULL;
     }
+
+    stage->dust = (Dust*) calloc(MAX_DUST_COUNT, sizeof(Dust));
+    if (stage->dust == NULL) {
+
+        m_memory_error();
+
+        dispose_stage((Stage*) stage);
+        return NULL;
+    }
+    stage->dustCount = MAX_DUST_COUNT;
 
     stage->bufferPointer = 0;
     stage->bufferSize = BUFFER_MAX_COUNT;
@@ -810,7 +926,7 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->animationTimer = 0;
     stage->animDir = 3;
     stage->nonPlayerMoved = false;
-    stage->destroying = false;
+    stage->animType = ANIMATION_MOVE;
 
     stage->baseMap = NULL;
     stage->wallState = false;
@@ -836,6 +952,7 @@ void dispose_stage(Stage* _stage) {
     m_free(stage->topLayerBuffer);
     m_free(stage->wallStateBuffer);
 
+    m_free(stage->dust);
     m_free(stage->redrawBuffer);
     m_free(stage->bottomLayer);
     m_free(stage->topLayer);
@@ -883,6 +1000,7 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
 void stage_update(Stage* _stage, i16 step) {
 
     _Stage* stage = (_Stage*) _stage;
+    i16 i;
 
     if (stage->animationTimer > 0) {
 
@@ -891,6 +1009,11 @@ void stage_update(Stage* _stage, i16 step) {
     else {
 
         control(stage);
+    }
+
+    for (i = 0; i < stage->dustCount; ++ i) {
+
+        update_dust_particle(&stage->dust[i], stage, step);
     }
 }
 
@@ -902,11 +1025,17 @@ void stage_draw(Stage* _stage, Canvas* canvas,
 
     i16 left = 160 - stage->width*12;
     i16 top = 100 - stage->height*10;
-    
+    i16 i;
+
     canvas_set_clip_area(canvas, left, top, stage->width*24, stage->height*20);
 
     canvas_toggle_clipping(canvas, false);
     draw_static_layer(stage, canvas, staticTiles, left, top);
+
+    for (i = 0; i < stage->dustCount; ++ i) {
+
+        draw_dust(&stage->dust[i], canvas, dynamicTiles, left, top);
+    }
 
     canvas_toggle_clipping(canvas, true);
     draw_dynamic_layer(stage, canvas, dynamicTiles, left, top);
