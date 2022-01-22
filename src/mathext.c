@@ -29,3 +29,9 @@ i16 round_i16(i16 x, i16 d) {
 
     return (x + (d - 1)) / d;
 }
+
+
+i16 neg_mod_i16(i16 m, i16 n) {
+
+    return ((m % n) + n) % n;
+}

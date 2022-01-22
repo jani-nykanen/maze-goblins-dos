@@ -184,13 +184,64 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
 }
 
 
-static void draw_dynamic_layer(_Stage* stage, 
+static void draw_moving_object(_Stage* stage, 
     Canvas* canvas, Bitmap* dynamicTiles,
-    i16 left, i16 top) {
-
+    i16 x, i16 y, i16 id, i16 dx, i16 dy) {
+    
     static const i16 PLAYER_FRAME[] = {2, 1, 2, 0};
     static const i16 IMP_FRAME[] = {0, 1, 0, 2, 0};
     static const i16 FRAME_TIME = 120;
+
+    i16 frame;
+
+    switch (id) {
+
+    // Player
+    case 2:
+
+        frame = PLAYER_FRAME[stage->animDir];
+        canvas_draw_bitmap_region(canvas, dynamicTiles, 
+            frame*24, 0, 24, 20, dx, dy, stage->animDir == 2);
+        break;
+
+    // Rock
+    case 3:
+        canvas_draw_bitmap_region(canvas, dynamicTiles, 
+            72, 0, 24, 20, dx, dy, false);
+        break;
+
+    // Imps
+    case 4:
+    case 5:
+    case 6:
+
+        frame = stage->animationTimer / FRAME_TIME;
+        if (x % 2 == y % 2)
+            frame += 2;
+
+        canvas_draw_bitmap_region(canvas, dynamicTiles, 
+            IMP_FRAME[frame]*24, 20 + 20 * (id-4), 
+            24, 20, dx, dy, false);
+        break;
+
+    // Dying imp
+    case 127:
+
+        frame = max_i16(0, 3 - stage->animationTimer / (DESTROY_TIME/4));
+        canvas_draw_bitmap_region(canvas, dynamicTiles, 
+            frame*24, 60, 24, 20, dx, dy, false);
+        break;
+
+    default:
+        break;
+    }
+
+}
+
+
+static void draw_dynamic_layer(_Stage* stage, 
+    Canvas* canvas, Bitmap* dynamicTiles,
+    i16 left, i16 top) {
 
     i16 x, y;
     i16 i = 0;
@@ -200,7 +251,6 @@ static void draw_dynamic_layer(_Stage* stage,
     i16 shiftx = 0;
     i16 shifty = 0;
 
-    i16 frame;
     i16 id;
 
     if (stage->animationTimer > 0 && !stage->destroying) {
@@ -222,47 +272,36 @@ static void draw_dynamic_layer(_Stage* stage,
             dy = top + y*20 + shifty;
 
             id = stage->topLayer[i];
-            switch (id) {
+            draw_moving_object(stage, canvas, dynamicTiles, x, y, id, dx, dy);
 
-            // Player
-            case 2:
+            // "Looping objects"
+            // Left
+            if (stage->animDir == 2 && x == stage->width-1) {
 
-                frame = PLAYER_FRAME[stage->animDir];
-                canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    frame*24, 0, 24, 20, dx, dy, stage->animDir == 2);
-                break;
+                draw_moving_object(stage, canvas, dynamicTiles, 
+                    0, y, id, 
+                    left - 24 + shiftx, dy);
+            }
+            // Right
+            else if (stage->animDir == 0 && x == 0) {
 
-            // Rock
-            case 3:
-                canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    72, 0, 24, 20, dx, dy, false);
-                break;
+                draw_moving_object(stage, canvas, dynamicTiles, 
+                    stage->width-1, y, id, 
+                    left + stage->width*24 + shiftx, dy);
+            }
+            // Top
+            else if (stage->animDir == 1 && y == stage->height-1) {
 
-            // Imps
-            case 4:
-            case 5:
-            case 6:
+                draw_moving_object(stage, canvas, dynamicTiles, 
+                    x, 0, id, 
+                    dx, top - 24 + shifty);
+            }
+            // Bottom
+            else if (stage->animDir == 3 && y == 0) {
 
-                frame = stage->animationTimer / FRAME_TIME;
-                if (x % 2 == y % 2)
-                    frame += 2;
-
-                canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    IMP_FRAME[frame]*24, 20 + 20 * (id-4), 
-                    24, 20, dx, dy, false);
-                break;
-
-            // Dying imp
-            case 127:
-
-                frame = max_i16(0, 3 - stage->animationTimer / (DESTROY_TIME/4));
-                canvas_draw_bitmap_region(canvas, dynamicTiles, 
-                    frame*24, 60, 24, 20, dx, dy, false);
-
-                break;
-
-            default:
-                break;
+                draw_moving_object(stage, canvas, dynamicTiles, 
+                    x, stage->height-1, id, 
+                    dx, top + stage->height*20 + shifty);
             }
 
             if (stage->animationTimer <= 0)
@@ -275,11 +314,14 @@ static void draw_dynamic_layer(_Stage* stage,
 }
 
 
-static bool is_player_in_direction(_Stage* stage, i16 dx, i16 dy, i16 dirx, i16 diry) {
+static bool is_player_in_direction(_Stage* stage, i16 x, i16 y, i16 dirx, i16 diry) {
 
     u8 top;
     u8 bottom;
     i16 i;
+
+    i16 dx = x;
+    i16 dy = y;
 
     do {
 
@@ -296,21 +338,24 @@ static bool is_player_in_direction(_Stage* stage, i16 dx, i16 dy, i16 dirx, i16 
         if (top == 2)
             return true;
 
-        dx += dirx;
-        dy += diry;
+        dx = neg_mod_i16(dx + dirx, stage->width);
+        dy = neg_mod_i16(dy + diry, stage->height);
     }
-    while (dx >= 0 && dy >= 0 && dx < stage->width && dy < stage->height);
+    while (dx != x || dy != y);
 
     return false;
 }
 
 
 static bool is_free_tile_in_direction(_Stage* stage, 
-    i16 dx, i16 dy, i16 dirx, i16 diry, bool isPlayer) {
+    i16 x, i16 y, i16 dirx, i16 diry, bool isPlayer) {
 
     u8 top;
     u8 bottom;
     i16 i;
+
+    i16 dx = x;
+    i16 dy = y;
 
     do {
 
@@ -327,12 +372,12 @@ static bool is_free_tile_in_direction(_Stage* stage,
             (isPlayer && isPlayer && bottom == 8)))
             return true;
 
-        dx += dirx;
-        dy += diry;
+        dx = neg_mod_i16(dx + dirx, stage->width);
+        dy = neg_mod_i16(dy + diry, stage->height);
 
         isPlayer = false;
     }
-    while (dx >= 0 && dy >= 0 && dx < stage->width && dy < stage->height);
+    while (dx != x || dy != y);
 
     return false;
 }
@@ -347,6 +392,8 @@ static bool check_movement(_Stage* stage, Action a) {
 
     i16 currentIndex;
     i16 targetIndex;
+
+    i16 dx, dy;
 
     u8 id;
 
@@ -363,11 +410,14 @@ static bool check_movement(_Stage* stage, Action a) {
             id = stage->topLayerBuffer[stage->bufferPointer][currentIndex];
             if (id < 2 || id > 7) continue;
 
+            dx = neg_mod_i16(x + dirx, (i16) stage->width);
+            dy = neg_mod_i16(y + diry, (i16) stage->height);
+
             if (is_player_in_direction(stage, x, y, -dirx, -diry)) {
 
-                if (is_free_tile_in_direction(stage, x + dirx, y + diry, dirx, diry, id == 2)) {
+                if (is_free_tile_in_direction(stage, dx, dy, dirx, diry, id == 2)) {
 
-                    targetIndex = (y + diry)*stage->width + x + dirx;
+                    targetIndex = dy*stage->width + dx;
 
                     stage->redrawBuffer[currentIndex] = true;
                     stage->redrawBuffer[targetIndex] = true;
