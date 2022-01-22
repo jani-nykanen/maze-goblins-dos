@@ -107,7 +107,7 @@ static bool loop(_Window* window) {
         }
 
         if (check_default_key_shortcuts())
-                return true;
+            return true;
         keyboard_update();
 
         if (window->redraw != NULL) {

@@ -22,6 +22,8 @@ static i16 FIBONACCI[90];
 
 static void compute_fibonacci() {
 
+    // Just find a suitable prime here to avoid
+    // interger overflow
     const i16 MAX = 251;
 
     i16 i;
@@ -57,11 +59,14 @@ typedef struct {
 
     u8* bottomLayer;
     u8* topLayer;
+    bool wallState;
+
     u8* redrawBuffer;
     u8* connectionBuffer;
 
     u8** bottomLayerBuffer;
     u8** topLayerBuffer;
+    bool* wallStateBuffer;
     u16 bufferSize;
     u16 bufferPointer;
     u16 undoCount;
@@ -135,6 +140,8 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
     i16 dx, dy;
     i16 frame;
 
+    u8 id;
+
     for (y = 0; y < stage->height; ++ y) {
 
         for (x = 0; x < stage->width; ++ x) {
@@ -147,7 +154,8 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
             dx = left + x*24;
             dy = top + y*20;
 
-            switch (stage->bottomLayer[i]) {
+            id = stage->bottomLayer[i];
+            switch (id) {
 
             // Floor
             case 1:
@@ -159,6 +167,20 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
             case 8:
 
                 canvas_draw_bitmap_region_fast(canvas, staticTiles, 48, 0, 24, 20, dx, dy);
+                break;
+
+            // Walls, off
+            case 9:
+
+                canvas_draw_bitmap_region_fast(canvas, staticTiles, 0, 20, 24, 20, dx, dy);
+                break;
+
+            // Walls, on
+            // & button
+            case 10:
+            case 11:
+
+                canvas_draw_bitmap_region_fast(canvas, staticTiles, 24, 20 * (id-10), 24, 20, dx, dy);
                 break;
 
             // Pure darkness
@@ -214,6 +236,7 @@ static void draw_moving_object(_Stage* stage,
     case 4:
     case 5:
     case 6:
+    case 7:
 
         frame = stage->animationTimer / FRAME_TIME;
         if (x % 2 == y % 2)
@@ -229,7 +252,7 @@ static void draw_moving_object(_Stage* stage,
 
         frame = max_i16(0, 3 - stage->animationTimer / (DESTROY_TIME/4));
         canvas_draw_bitmap_region(canvas, dynamicTiles, 
-            frame*24, 60, 24, 20, dx, dy, false);
+            frame*24, 100, 24, 20, dx, dy, false);
         break;
 
     default:
@@ -457,6 +480,8 @@ static void undo(_Stage* stage) {
         stage->topLayerBuffer[stage->bufferPointer], 
         stage->width*stage->height);
 
+    stage->wallState = stage->wallStateBuffer[stage->bufferPointer];
+
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
 
     -- stage->undoCount;
@@ -525,9 +550,11 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 
     i16 x, y;
     u8 id;
+    u8 tid;
     i16 i, j, k;
 
     bool destroy = false;
+    bool buttonWithoutObject = false;
 
     memset(stage->connectionBuffer, 0, stage->width*stage->height);
 
@@ -538,6 +565,11 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 
             i = y*stage->width + x;
             id = stage->topLayer[i];
+
+            if (stage->bottomLayer[i] == 11 && id == 0) {
+
+                buttonWithoutObject = true;
+            }
 
             if (id == 2) {
 
@@ -554,7 +586,9 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
             for (k = 0; k < 4; ++ k) {
 
                 j = (y + DIR_Y[k])*stage->width + x + DIR_X[k];
-                if (get_upper_tile(stage, x+DIR_X[k], y+DIR_Y[k]) == id) {
+                tid = get_upper_tile(stage, x+DIR_X[k], y+DIR_Y[k]);
+
+                if (tid == id || (id == 7 && (tid >= 4 && tid <= 7)) || tid == 7) {
 
                     if ((++ stage->connectionBuffer[i]) >= MIN_CONNECTION) {
 
@@ -565,15 +599,34 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
         }
     }
 
-    if (!nonPlayerMoved)
+    if (buttonWithoutObject != stage->wallState && !nonPlayerMoved)
         return false;
 
     // Step 2: check things to destroy
+    // (and walls to toggle/untoggle)
     for (y = 0; y < stage->height; ++ y) {
 
         for (x = 0; x < stage->width; ++ x) {
 
             i = y*stage->width + x;
+
+            // Toggle walls
+            if (buttonWithoutObject == stage->wallState) {
+
+                if (stage->bottomLayer[i] == 9) {
+
+                    stage->bottomLayer[i] = 10;
+                    stage->redrawBuffer[i] = true;
+                }
+                else if (stage->bottomLayer[i] == 10) {
+
+                    stage->bottomLayer[i] = 9;
+                    stage->redrawBuffer[i] = true;
+                }
+            }
+
+            if (!nonPlayerMoved)
+                continue;
 
             if (stage->connectionBuffer[i] > 0) {
 
@@ -605,6 +658,11 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
         }
     }
 
+    if (buttonWithoutObject == stage->wallState) {
+
+        stage->wallState = !stage->wallState;
+    }
+
     return destroy;
 }
 
@@ -632,6 +690,8 @@ static void store_state(_Stage* stage) {
         stage->bottomLayer, stage->width*stage->height);
     memcpy(stage->topLayerBuffer[stage->bufferPointer], 
         stage->topLayer, stage->width*stage->height);
+
+    stage->wallStateBuffer[stage->bufferPointer] = stage->wallState;
 }
 
 
@@ -736,6 +796,13 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
         return NULL;
     }
 
+    stage->wallStateBuffer = (bool*) calloc(maxWidth*maxHeight, sizeof(bool));
+    if (stage->wallStateBuffer == NULL) {
+
+        dispose_stage((Stage*) stage);
+        return NULL;
+    }
+
     stage->bufferPointer = 0;
     stage->bufferSize = BUFFER_MAX_COUNT;
     stage->undoCount = 0;
@@ -746,6 +813,7 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->destroying = false;
 
     stage->baseMap = NULL;
+    stage->wallState = false;
 
     return (Stage*) stage;
 }
@@ -766,6 +834,7 @@ void dispose_stage(Stage* _stage) {
     }
     m_free(stage->bottomLayerBuffer);
     m_free(stage->topLayerBuffer);
+    m_free(stage->wallStateBuffer);
 
     m_free(stage->redrawBuffer);
     m_free(stage->bottomLayer);
@@ -806,6 +875,8 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
 
     stage->baseMap = tilemap;
+
+    stage->wallState = false;
 }
 
 
