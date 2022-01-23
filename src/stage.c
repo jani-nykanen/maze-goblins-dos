@@ -157,9 +157,14 @@ static void filter_array(u8* arr, const u8* filter, u16 arrLen, u16 filterLen) {
 
 static void update_dust_particle(Dust* d, _Stage* stage, i16 step) {
 
+    i16 i;
+
     if (!d->exist) return;
 
-    stage->redrawBuffer[d->y * stage->width + d->x] = true;
+    i = d->y * stage->width + d->x;
+
+    //if (stage->topLayer[i] == 0)
+    stage->redrawBuffer[i] = true;
 
     if ((d->timer -= step) <= 0) {
 
@@ -452,7 +457,7 @@ static bool is_free_tile_in_direction(_Stage* stage,
 
         if (top == 0 && 
             (bottom == 0 || bottom == 9 || bottom == 11 || 
-            (isPlayer && isPlayer && bottom == 8)))
+            (isPlayer && bottom == 8)))
             return true;
 
         dx = neg_mod_i16(dx + dirx, stage->width);
@@ -1062,6 +1067,8 @@ bool stage_reset(Stage* _stage) {
 
     stage_init_tilemap(_stage, stage->baseMap);
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
+
+    stage->animDir = 3;
 
     return true;
 }
