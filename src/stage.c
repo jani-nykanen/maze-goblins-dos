@@ -694,7 +694,7 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
     }
 
     if (buttonWithoutObject != stage->wallState && !nonPlayerMoved)
-        return false;
+        return ANIMATION_DESTROY;
 
     // Step 2: check things to destroy
     // (and walls to toggle/untoggle)
@@ -752,15 +752,22 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
         }
     }
 
-    if (destroy) {
-
-        return ANIMATION_DESTROY;
-    }
-
     if (buttonWithoutObject == stage->wallState) {
 
         stage->wallState = !stage->wallState;
-        return ANIMATION_TOGGLE_WALLS;
+        if (destroy) {
+
+            return ANIMATION_DESTROY;
+        }
+        else {
+
+            return ANIMATION_TOGGLE_WALLS;
+        }
+    }
+
+    if (destroy) {
+
+        return ANIMATION_DESTROY;
     }
 
     // Well, actually no animation at all!
@@ -768,17 +775,29 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 }
 
 
-static void clear_destroyed_objects(_Stage* stage) {
+static bool clear_destroyed_objects(_Stage* stage) {
 
     i16 i;
+
+    bool buttonWithoutObject = false;
 
     for (i = 0; i < stage->width*stage->height; ++ i) {
 
         if (stage->topLayer[i] == 127) {
 
             stage->topLayer[i] = 0;
+            if (stage->bottomLayer[i] == 11) {
+
+                buttonWithoutObject = true;
+            }
         }
     }
+
+    if (buttonWithoutObject) {
+
+        return check_effects(stage, false) == ANIMATION_TOGGLE_WALLS;
+    }
+    return false;
 }
 
 
@@ -807,10 +826,13 @@ static void update_animation(_Stage* stage, i16 step) {
 
         if (stage->animType == ANIMATION_DESTROY) {
 
-            clear_destroyed_objects(stage);
-        }
+            if (clear_destroyed_objects(stage)) {
 
-        if (stage->animType == ANIMATION_MOVE) {
+                stage->animationTimer = TOGGLE_TIME;
+                cloneBuffer = false;
+            }
+        }
+        else if (stage->animType == ANIMATION_MOVE) {
 
             stage->animType = check_effects(stage, stage->nonPlayerMoved);
   

@@ -137,7 +137,7 @@ i16 init_game_scene() {
     }
 
     stage_init_tilemap(game->stage, 
-        tilemap_pack_get_tilemap(game->baseLevels, 12));
+        tilemap_pack_get_tilemap(game->baseLevels, 13));
 
     game->backgroundDrawn = false;
 
