@@ -313,7 +313,10 @@ static void draw_moving_object(_Stage* stage,
         break;
 
     // Dying imp
-    case 127:
+    case 131:
+    case 132:
+    case 133:
+    case 134:
 
         frame = max_i16(0, 3 - stage->animationTimer / (DESTROY_TIME/4));
         canvas_draw_bitmap_region(canvas, dynamicTiles, 
@@ -643,9 +646,10 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
     static const i16 MIN_CONNECTION = 2;
 
     i16 x, y;
+    i16 dx, dy;
     u8 id;
     u8 tid;
-    i16 i, j, k;
+    i16 i, k;
 
     bool destroy = false;
     bool buttonWithoutObject = false;
@@ -679,8 +683,9 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 
             for (k = 0; k < 4; ++ k) {
 
-                j = (y + DIR_Y[k])*stage->width + x + DIR_X[k];
-                tid = get_upper_tile(stage, x+DIR_X[k], y+DIR_Y[k]);
+                dx = neg_mod_i16(x + DIR_X[k], (i16) stage->width);
+                dy = neg_mod_i16(y + DIR_Y[k], (i16) stage->height);
+                tid = get_upper_tile(stage, dx, dy);
 
                 if (tid == id || (id == 7 && (tid >= 4 && tid <= 7)) || tid == 7) {
 
@@ -703,6 +708,7 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
         for (x = 0; x < stage->width; ++ x) {
 
             i = y*stage->width + x;
+            id = stage->topLayer[i];
 
             // Toggle walls
             if (buttonWithoutObject == stage->wallState) {
@@ -726,17 +732,24 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 
                 if (stage->connectionBuffer[i] >= MIN_CONNECTION) {
 
-                    stage->topLayer[i] = 127;
+                    stage->topLayer[i] += 127;
                     stage->redrawBuffer[i] = true;
                 }
                 else {
 
                     for (k = 0; k < 4; ++ k) {
 
-                        j = (y + DIR_Y[k])*stage->width + x + DIR_X[k];
-                        if (get_connection_count(stage, x+DIR_X[k], y+DIR_Y[k]) >= MIN_CONNECTION) {
+                        dx = neg_mod_i16(x + DIR_X[k], (i16) stage->width);
+                        dy = neg_mod_i16(y + DIR_Y[k], (i16) stage->height);
 
-                            stage->topLayer[i] = 127;
+                        tid = get_upper_tile(stage, dx, dy);
+                        if (tid >= 127)
+                            tid -= 127;
+                        
+                        if ((tid == id || (id == 7 && (tid >= 4 && tid <= 7)) || tid == 7) &&
+                            get_connection_count(stage, dx, dy) >= MIN_CONNECTION) {
+
+                            stage->topLayer[i] += 127;
                             stage->redrawBuffer[i] = true;
                             break;
                         }
@@ -783,7 +796,7 @@ static bool clear_destroyed_objects(_Stage* stage) {
 
     for (i = 0; i < stage->width*stage->height; ++ i) {
 
-        if (stage->topLayer[i] == 127) {
+        if (stage->topLayer[i] >= 127) {
 
             stage->topLayer[i] = 0;
             if (stage->bottomLayer[i] == 11) {
