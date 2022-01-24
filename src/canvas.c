@@ -1,5 +1,6 @@
 #include "canvas.h"
 #include "system.h"
+#include "palette.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -351,4 +352,17 @@ void canvas_set_clip_area(Canvas* _canvas, i16 x, i16 y, i16 w, i16 h) {
     _Canvas* canvas = (_Canvas*) _canvas;
 
     canvas->clipArea = rect_i16(x, y, w, h);
+}
+
+
+void canvas_darken(Canvas* _canvas, i16 amount) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    u16 i;
+
+    for (i = 0; i < canvas->width*canvas->height; ++ i) {
+
+        canvas->pixels[i] = darken_color(canvas->pixels[i], amount);
+    }
 }

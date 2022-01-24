@@ -2,6 +2,7 @@
 #include "system.h"
 #include "canvas.h"
 #include "keyb.h"
+#include "palette.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -34,44 +35,10 @@ static void vblank() {
 }
 
 
-static void set_palette() {
-
-    const u32 PALETTE_INDEX = 0x03c8;
-    const u32 PALETTE_DATA = 0x03c9;
-
-    u8 i = 0;
-    u8 r, g, b;
-
-    outp(PALETTE_INDEX,0);
-    do {
-
-        r = i >> 5;
-        g = i << 3;
-        g >>= 5;
-        b = i << 6;
-        b >>= 6;
-
-        r *= 36;
-        g *= 36;
-        b *= 85;
-
-        if (r >= 252) r = 255;
-        if (g >= 252) g = 255;
-
-        outp(PALETTE_DATA, r / 4);
-        outp(PALETTE_DATA, g / 4);
-        outp(PALETTE_DATA, b / 4);
-
-        
-    }
-    while ((++ i) != 0);
-}
-
-
 static void init_graphics() {
 
     _setvideomode(_MRES256COLOR);
-    set_palette();
+    init_palette();
 }
 
 

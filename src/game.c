@@ -20,6 +20,8 @@ typedef struct {
     Stage* stage;
 
     bool backgroundDrawn;
+    bool pauseDrawn;
+    bool paused;
 
 } Game;
 
@@ -27,6 +29,21 @@ static Game* game = NULL;
 
 
 static i16 update_game(i16 step) {
+
+    if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
+
+        game->paused = !game->paused;
+        if (game->paused) {
+
+            game->pauseDrawn = false;
+        }
+        else {
+
+            stage_force_redraw(game->stage);
+            game->backgroundDrawn = false;
+        }
+    }
+    if (game->paused) return 0;
 
     stage_update(game->stage, step);
 
@@ -97,6 +114,16 @@ static void draw_background(Canvas* canvas) {
 
 static void redraw_game(Canvas* canvas) {
 
+    if (game->paused) {
+
+        if (!game->pauseDrawn) {
+
+            canvas_darken(canvas, 2);
+            game->pauseDrawn = true;
+        }
+        return;
+    }
+
     if (!game->backgroundDrawn) {
         
         draw_background(canvas);
@@ -137,7 +164,7 @@ i16 init_game_scene() {
     }
 
     stage_init_tilemap(game->stage, 
-        tilemap_pack_get_tilemap(game->baseLevels, 12));
+        tilemap_pack_get_tilemap(game->baseLevels, 18), false);
 
     game->backgroundDrawn = false;
 

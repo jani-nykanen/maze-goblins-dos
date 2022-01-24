@@ -1001,7 +1001,7 @@ void dispose_stage(Stage* _stage) {
 }
 
 
-void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
+void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
 
     const u8 BOTTOM_FILTER[] = {2, 3, 4, 5, 6, 7};
     const u8 TOP_FILTER[] = {1, 8, 9, 10, 11};
@@ -1019,6 +1019,8 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap) {
     tilemap_copy(tilemap, stage->topLayer);
     filter_array(stage->topLayer, TOP_FILTER, 
         stage->maxWidth*stage->maxHeight, (u16) strlen(TOP_FILTER));
+
+    if (resetting) return;
 
     stage->width = min_u16(stage->maxWidth, w);
     stage->height = min_u16(stage->maxHeight, h);
@@ -1100,10 +1102,18 @@ bool stage_reset(Stage* _stage) {
     if (stage->animationTimer > 0)
         return false;
 
-    stage_init_tilemap(_stage, stage->baseMap);
+    stage_init_tilemap(_stage, stage->baseMap, true);
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
 
-    stage->animDir = 3;
+    store_state(stage);
 
     return true;
+}
+
+
+void stage_force_redraw(Stage* _stage) {
+
+    _Stage* stage = (_Stage*) _stage;
+
+    memset(stage->redrawBuffer, 1, stage->width*stage->height);
 }

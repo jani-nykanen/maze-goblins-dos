@@ -48,5 +48,7 @@ void canvas_draw_text(Canvas* canvas, Bitmap* bmp,
 void canvas_reset_clip_area(Canvas* canvas);
 void canvas_set_clip_area(Canvas* canvas, i16 x, i16 y, i16 w, i16 h);
 
+void canvas_darken(Canvas* canvas, i16 amount);
+
 
 #endif // PROJECTNAME_CANVAS_H
