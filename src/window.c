@@ -14,6 +14,10 @@
 #include <graph.h>
 
 
+// Around a second
+static const i16 TRANSITION_TIME = 70; 
+
+
 typedef struct {
 
     Canvas* framebuffer;
@@ -23,6 +27,10 @@ typedef struct {
 
     UpdateCallback update;
     RedrawCallback redraw;
+
+    i16 transitionTimer;
+    bool fadingOut;
+    TransitionCallback transitionCb;
 
 } _Window;
 
@@ -61,17 +69,53 @@ static void copy_canvas_to_screen(_Window* window) {
 }
 
 
+static void update_transition(_Window* window, i16 step) {
+
+    i16 hue;
+
+    if (window->transitionTimer <= 0) {
+
+        canvas_set_global_hue(window->framebuffer, 0);
+        return;
+    }
+
+    if ((window->transitionTimer -= step) <= 0) {
+
+        if (window->fadingOut) {
+
+            window->fadingOut = false;
+            if (window->transitionCb != NULL) {
+
+                window->transitionCb((Window*) window);
+            }
+
+            window->transitionTimer += TRANSITION_TIME;
+        }
+    }
+
+    hue = (HUE_COUNT-1) * window->transitionTimer;
+    hue /= TRANSITION_TIME;
+
+    if (window->fadingOut)
+        hue = (HUE_COUNT-1) - hue;
+
+    canvas_set_global_hue(window->framebuffer, hue);
+}
+
+
 static bool loop(_Window* window) {
 
     if ( (window->frameCounter ++) == window->frameSkip) {
 
         window->frameCounter = 0;
     
-        if (window->update != NULL) {
+        if (window->update != NULL && window->transitionTimer <= 0) {
 
-            if (window->update(window->frameSkip+1))
+            if (window->update((Window*) window, window->frameSkip+1))
                 return true;
         }
+
+        update_transition(window, window->frameSkip+1);
 
         if (check_default_key_shortcuts())
             return true;
@@ -154,4 +198,15 @@ void window_make_active(Window* _window) {
     _Window* window = (_Window*) _window;
 
     while (!loop(window));
+}
+
+
+void window_start_transition(Window* _window,
+    bool fadeOut, i16 speed, TransitionCallback cb) {
+
+    _Window* window = (_Window*) _window;
+
+    window->fadingOut = fadeOut;
+    window->transitionTimer = TRANSITION_TIME;
+    window->transitionCb = cb;
 }

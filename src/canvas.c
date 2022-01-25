@@ -73,6 +73,8 @@ typedef struct {
     bool clippingEnabled;
     Rect_i16 clipArea;
 
+    i16 hue;
+
 } _Canvas;
 
 
@@ -173,6 +175,8 @@ Canvas* new_canvas(u16 width, u16 height) {
     c->clippingEnabled = true;
     c->clipArea = rect_i16(0, 0, 320, 200);
 
+    c->hue = 0;
+
     return (Canvas*) c;
 }
 
@@ -208,7 +212,18 @@ void canvas_copy_to_memory_location(Canvas* _canvas, u32 loc) {
 
     _Canvas* canvas = (_Canvas*) _canvas;
 
-    memcpy((void*)(size_t)loc, canvas->pixels, canvas->width*canvas->height);
+    u32 i;
+    u32 end = loc + (u32) (canvas->width*canvas->height);
+
+    if (canvas->hue == 0) {
+
+        memcpy((void*)(size_t)loc, canvas->pixels, canvas->width*canvas->height);
+    }
+    else {
+
+        copy_hued_data_to_location(canvas->pixels, loc, 
+            (u32) (canvas->width*canvas->height), canvas->hue);
+    }
 }
 
 
@@ -365,4 +380,12 @@ void canvas_darken(Canvas* _canvas, i16 amount) {
 
         canvas->pixels[i] = darken_color(canvas->pixels[i], amount);
     }
+}
+
+
+void canvas_set_global_hue(Canvas* _canvas, i16 hue) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    canvas->hue = hue;
 }

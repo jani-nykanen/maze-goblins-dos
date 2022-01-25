@@ -30,7 +30,7 @@ typedef struct {
 static Game* game = NULL;
 
 
-static i16 update_game(i16 step) {
+static i16 update_game(Window* window, i16 step) {
 
     if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
 

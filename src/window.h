@@ -10,8 +10,9 @@
 EMPTY_STRUCT(Window);
 
 
-typedef i16 (*UpdateCallback) (i16);
+typedef i16 (*UpdateCallback) (Window*, i16);
 typedef void (*RedrawCallback) (Canvas*);
+typedef void (*TransitionCallback) (Window*);
 
 
 // All the parameters are ignored when compiled to DOS
@@ -22,6 +23,9 @@ void window_register_callback_functions(Window* window,
     UpdateCallback update,
     RedrawCallback redraw);
 void window_make_active(Window* window);
+
+void window_start_transition(Window* window,
+    bool fadeOut, i16 speed, TransitionCallback cb);
 
 
 #endif // PROJECTNAME_WINDOW_H

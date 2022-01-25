@@ -6,9 +6,6 @@
 #include <graph.h>
 
 
-#define HUE_COUNT 8
-
-
 static u8 HUE_DARK [HUE_COUNT] [256];
 static u8 HUE_LIGHT [HUE_COUNT] [256];
 
@@ -103,4 +100,21 @@ u8 darken_color(u8 color, i16 amount) {
 
 u8 lighten_color(u8 color, i16 amount) {
 
+}
+
+
+void copy_hued_data_to_location(u8* data, u32 target, u32 len, i16 hue) {
+
+    u32 i;
+    u8* out = (u8*) target;
+
+    if (hue <= 0)
+        hue = 0;
+    else if (hue >= HUE_COUNT)
+        hue = HUE_COUNT-1;
+
+    for (i = 0; i < len; ++ i) {
+
+        out[i] = HUE_DARK[hue][(u16) data[i]];
+    }
 }
