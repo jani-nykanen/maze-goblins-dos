@@ -23,6 +23,8 @@ typedef struct {
     bool pauseDrawn;
     bool paused;
 
+    u16 stageIndex;
+
 } Game;
 
 static Game* game = NULL;
@@ -45,7 +47,17 @@ static i16 update_game(i16 step) {
     }
     if (game->paused) return 0;
 
-    stage_update(game->stage, step);
+    if (stage_update(game->stage, step)) {
+
+        // Stage finished, move to the next stage
+        game->backgroundDrawn = false;
+
+        ++ game->stageIndex;
+        stage_init_tilemap(game->stage, 
+            tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
+            false);
+        return 0;
+    }
 
     if (keyboard_get_normal_key(KEY_R) == STATE_PRESSED) {
 
@@ -163,8 +175,10 @@ i16 init_game_scene() {
         return 1;
     }
 
+    game->stageIndex = 0;
     stage_init_tilemap(game->stage, 
-        tilemap_pack_get_tilemap(game->baseLevels, 18), false);
+        tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
+        false);
 
     game->backgroundDrawn = false;
 

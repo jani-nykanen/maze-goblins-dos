@@ -54,7 +54,9 @@ typedef enum {
 
     ANIMATION_MOVE = 0,
     ANIMATION_DESTROY = 1,
-    ANIMATION_TOGGLE_WALLS = 2
+    ANIMATION_TOGGLE_WALLS = 2,
+
+    ANIMATION_NONE = 255 // A poor choice, I know
 
 } AnimationType;
 
@@ -104,6 +106,8 @@ typedef struct {
     u16 dustCount;
 
     Tilemap* baseMap;
+
+    u16 starCount;
 
 } _Stage;
 
@@ -559,6 +563,22 @@ static bool check_movement(_Stage* stage, Action a) {
 }
 
 
+static u16 compute_stars(_Stage* stage) {
+
+    u16 sum = 0;
+    i16 i;
+
+    for (i = 0; i < stage->width*stage->height; ++ i) {
+
+        if (stage->bottomLayer[i] == 8) {
+
+            ++ sum;
+        }
+    }
+    return sum;
+}
+
+
 static void undo(_Stage* stage) {
 
     if (stage->undoCount == 0) return;
@@ -584,6 +604,8 @@ static void undo(_Stage* stage) {
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
 
     -- stage->undoCount;
+
+    stage->starCount = compute_stars(stage);
 }
 
 
@@ -677,6 +699,7 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
                 if (stage->bottomLayer[i] == 8) {
 
                     stage->bottomLayer[i] = 0;
+                    -- stage->starCount;
                 }
                 continue;
             }
@@ -851,7 +874,7 @@ static void update_animation(_Stage* stage, i16 step) {
         else if (stage->animType == ANIMATION_MOVE) {
 
             stage->animType = check_effects(stage, stage->nonPlayerMoved);
-  
+
             if (stage->nonPlayerMoved &&
                 stage->animType == ANIMATION_DESTROY) {
 
@@ -1002,6 +1025,7 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->wallState = false;
 
     stage->redrawn = true;
+    stage->starCount = 0;
 
     return (Stage*) stage;
 }
@@ -1071,10 +1095,12 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
 
     check_initial_wall_state(stage);
     stage->wallStateBuffer[0] = stage->wallState;
+
+    stage->starCount = compute_stars(stage);
 }
 
 
-void stage_update(Stage* _stage, i16 step) {
+bool stage_update(Stage* _stage, i16 step) {
 
     _Stage* stage = (_Stage*) _stage;
     i16 i;
@@ -1092,6 +1118,8 @@ void stage_update(Stage* _stage, i16 step) {
 
         update_dust_particle(&stage->dust[i], stage, step);
     }
+
+    return stage->starCount == 0;
 }
 
 
