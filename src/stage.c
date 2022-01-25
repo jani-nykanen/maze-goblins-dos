@@ -83,6 +83,9 @@ typedef struct {
     bool wallState;
 
     u8* redrawBuffer;
+    u8* redrawBufferBuffer; // What
+    bool redrawn; // After being forced
+
     u8* connectionBuffer;
 
     u8** bottomLayerBuffer;
@@ -870,6 +873,24 @@ static void update_animation(_Stage* stage, i16 step) {
 }
 
 
+static void check_initial_wall_state(_Stage* stage) {
+
+    bool state = true;
+
+    i16 i;
+
+    for (i = 0; i < stage->width*stage->height; ++ i) {
+
+        if (stage->bottomLayer[i] == 11) {
+
+            state = false;
+        }
+    }
+
+    stage->wallState = state;
+}
+
+
 void init_stage() {
 
     compute_fibonacci();
@@ -898,6 +919,15 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
         dispose_stage((Stage*) stage);
         return NULL;
     }
+
+    stage->redrawBufferBuffer = (u8*) calloc(maxWidth*maxHeight, sizeof(u8));
+    if (stage->redrawBuffer == NULL) {
+
+        m_memory_error();
+
+        dispose_stage((Stage*) stage);
+        return NULL;
+    };
 
     stage->bottomLayer = (u8*) calloc(maxWidth*maxHeight, sizeof(u8));
     if (stage->bottomLayer == NULL) {
@@ -971,6 +1001,8 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->baseMap = NULL;
     stage->wallState = false;
 
+    stage->redrawn = true;
+
     return (Stage*) stage;
 }
 
@@ -988,6 +1020,8 @@ void dispose_stage(Stage* _stage) {
         m_free(stage->bottomLayerBuffer[i]);
         m_free(stage->topLayerBuffer[i]);
     }
+    m_free(stage->redrawBufferBuffer);
+
     m_free(stage->bottomLayerBuffer);
     m_free(stage->topLayerBuffer);
     m_free(stage->wallStateBuffer);
@@ -1035,7 +1069,8 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
 
     stage->baseMap = tilemap;
 
-    stage->wallState = false;
+    check_initial_wall_state(stage);
+    stage->wallStateBuffer[0] = stage->wallState;
 }
 
 
@@ -1068,6 +1103,21 @@ void stage_draw(Stage* _stage, Canvas* canvas,
     i16 left = 160 - stage->width*12;
     i16 top = 100 - stage->height*10;
     i16 i;
+
+    i16 oldAnimationTime;
+
+    if (!stage->redrawn) {
+
+        stage->redrawn = true;
+
+        oldAnimationTime = stage->animationTimer;
+        stage->animationTimer = 0;
+
+        stage_draw(_stage, canvas, staticTiles, dynamicTiles);
+
+        stage->animationTimer = oldAnimationTime;
+        memcpy(stage->redrawBuffer, stage->redrawBufferBuffer, stage->width*stage->height); 
+    }
 
     canvas_set_clip_area(canvas, left, top, stage->width*24, stage->height*20);
 
@@ -1115,5 +1165,8 @@ void stage_force_redraw(Stage* _stage) {
 
     _Stage* stage = (_Stage*) _stage;
 
+    memcpy(stage->redrawBufferBuffer, stage->redrawBuffer, stage->width*stage->height);
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
+
+    stage->redrawn = false;
 }
