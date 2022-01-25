@@ -29,6 +29,7 @@ typedef struct {
     RedrawCallback redraw;
 
     i16 transitionTimer;
+    i16 transitionSpeed;
     bool fadingOut;
     TransitionCallback transitionCb;
 
@@ -79,7 +80,7 @@ static void update_transition(_Window* window, i16 step) {
         return;
     }
 
-    if ((window->transitionTimer -= step) <= 0) {
+    if ((window->transitionTimer -= window->transitionSpeed * step) <= 0) {
 
         if (window->fadingOut) {
 
@@ -164,6 +165,11 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
     w->update = NULL;
     w->redraw = NULL;
 
+    w->transitionCb = NULL;
+    w->transitionTimer = 0;
+    w->fadingOut = false;
+    w->transitionSpeed = 1;
+
     return (Window*) w;
 }
 
@@ -206,6 +212,7 @@ void window_start_transition(Window* _window,
 
     _Window* window = (_Window*) _window;
 
+    window->transitionSpeed = speed;
     window->fadingOut = fadeOut;
     window->transitionTimer = TRANSITION_TIME;
     window->transitionCb = cb;

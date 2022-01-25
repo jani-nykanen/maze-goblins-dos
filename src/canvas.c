@@ -212,9 +212,6 @@ void canvas_copy_to_memory_location(Canvas* _canvas, u32 loc) {
 
     _Canvas* canvas = (_Canvas*) _canvas;
 
-    u32 i;
-    u32 end = loc + (u32) (canvas->width*canvas->height);
-
     if (canvas->hue == 0) {
 
         memcpy((void*)(size_t)loc, canvas->pixels, canvas->width*canvas->height);

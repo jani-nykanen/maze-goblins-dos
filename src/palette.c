@@ -105,6 +105,9 @@ u8 lighten_color(u8 color, i16 amount) {
 
 void copy_hued_data_to_location(u8* data, u32 target, u32 len, i16 hue) {
 
+    // Should be faster than palette swapping, which, at least
+    // in my experience, is slow
+
     u32 i;
     u8* out = (u8*) target;
 

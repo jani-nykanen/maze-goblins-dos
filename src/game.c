@@ -30,6 +30,17 @@ typedef struct {
 static Game* game = NULL;
 
 
+static void next_level(Window* window) {
+
+    game->backgroundDrawn = false;
+
+    ++ game->stageIndex;
+    stage_init_tilemap(game->stage, 
+        tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
+        false);
+}
+
+
 static i16 update_game(Window* window, i16 step) {
 
     if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
@@ -49,13 +60,7 @@ static i16 update_game(Window* window, i16 step) {
 
     if (stage_update(game->stage, step)) {
 
-        // Stage finished, move to the next stage
-        game->backgroundDrawn = false;
-
-        ++ game->stageIndex;
-        stage_init_tilemap(game->stage, 
-            tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
-            false);
+        window_start_transition(window, true, 2, next_level);
         return 0;
     }
 
