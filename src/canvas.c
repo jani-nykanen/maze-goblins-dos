@@ -85,19 +85,19 @@ static bool clip_rect(_Canvas* canvas,
     // Left
     if (*x < canvas->clipArea.x) {
 
-        *w -= canvas->clipArea.x - (*x);
+        *w -= (canvas->clipArea.x - (*x));
         *x = canvas->clipArea.x;
     }
     // Right
     if (*x+*w >= canvas->clipArea.x + canvas->clipArea.w) {
 
-        *w -= (*x+*w) - (canvas->clipArea.x + canvas->width);
+        *w -= (*x+*w) - (canvas->clipArea.x + canvas->clipArea.w);
     }
 
     // Top
     if (*y < canvas->clipArea.y) {
 
-        *h -= canvas->clipArea.y - (*y);
+        *h -= (canvas->clipArea.y - (*y));
         *y = canvas->clipArea.y;
     }
     // Bottom
@@ -219,7 +219,7 @@ void canvas_copy_to_memory_location(Canvas* _canvas, u32 loc) {
     else {
 
         copy_hued_data_to_location(canvas->pixels, loc, 
-            (u32) (canvas->width*canvas->height), canvas->hue);
+             (u32) (canvas->width*canvas->height), canvas->hue);
     }
 }
 
@@ -385,4 +385,13 @@ void canvas_set_global_hue(Canvas* _canvas, i16 hue) {
     _Canvas* canvas = (_Canvas*) _canvas;
 
     canvas->hue = hue;
+}
+
+
+void canvas_get_size(Canvas* _canvas, u16* w, u16* h) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    *w = canvas->width;
+    *h = canvas->height;
 }

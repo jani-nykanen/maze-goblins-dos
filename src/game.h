@@ -5,8 +5,8 @@
 #include "window.h"
 
 
-i16 init_game_scene(void);
-void dispose_game_scene(void);
+i16 init_game_scene(Window* window);
+void dispose_game_scene();
 
 void register_game_scene(Window* window);
 

@@ -100,6 +100,12 @@ u8 darken_color(u8 color, i16 amount) {
 
 u8 lighten_color(u8 color, i16 amount) {
 
+    if (amount <= 0)
+        return color;
+    else if (amount >= HUE_COUNT)
+        return 0;
+
+    return HUE_LIGHT[amount][(u16) color];
 }
 
 

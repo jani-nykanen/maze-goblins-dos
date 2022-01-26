@@ -1069,17 +1069,20 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
     u16 w;
     u16 h;
 
-    tilemap_get_size(tilemap, &w, &h);
+    // strlen shoud work here, but it possibly causes
+    // some weird bugs where the filtering fails to work
+
     tilemap_copy(tilemap, stage->bottomLayer);
     filter_array(stage->bottomLayer, BOTTOM_FILTER, 
-        stage->maxWidth*stage->maxHeight, (u16) strlen(BOTTOM_FILTER));
+        stage->maxWidth*stage->maxHeight, 6); // (u16) strlen(BOTTOM_FILTER));
 
     tilemap_copy(tilemap, stage->topLayer);
     filter_array(stage->topLayer, TOP_FILTER, 
-        stage->maxWidth*stage->maxHeight, (u16) strlen(TOP_FILTER));
+        stage->maxWidth*stage->maxHeight, 5); // (u16) strlen(TOP_FILTER));
 
     if (resetting) return;
 
+    tilemap_get_size(tilemap, &w, &h);
     stage->width = min_u16(stage->maxWidth, w);
     stage->height = min_u16(stage->maxHeight, h);
 
@@ -1090,6 +1093,7 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
     memcpy(stage->topLayerBuffer[0], stage->topLayer, stage->width*stage->height);
 
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
+    memset(stage->redrawBufferBuffer, 1, stage->width*stage->height);
 
     stage->baseMap = tilemap;
 

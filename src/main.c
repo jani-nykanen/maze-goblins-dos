@@ -29,7 +29,7 @@ i16 main() {
         return 1;
     }
 
-    if (init_game_scene() != 0) {
+    if (init_game_scene(window) != 0) {
 
         dispose_window(window);
         print_error();

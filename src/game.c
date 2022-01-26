@@ -6,6 +6,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+
+static const i16 WAIT_TIME = 70;
 
 
 typedef struct {
@@ -25,6 +29,10 @@ typedef struct {
 
     u16 stageIndex;
 
+    i16 waitTimer;
+    bool victory;
+    bool waitDrawn;
+
 } Game;
 
 static Game* game = NULL;
@@ -38,10 +46,32 @@ static void next_level(Window* window) {
     stage_init_tilemap(game->stage, 
         tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
         false);
+
+    game->victory = false;
+    game->waitTimer = WAIT_TIME;
+    game->waitDrawn = false;
 }
 
 
 static i16 update_game(Window* window, i16 step) {
+
+    if (game->waitTimer > 0) {
+
+        game->waitTimer -= step;
+        if (game->waitTimer <= 0) {
+
+            if (game->victory) {
+                
+                window_start_transition(window, true, 2, next_level);
+            }
+            else {
+
+                game->backgroundDrawn = false;
+                stage_force_redraw(game->stage);
+            }
+        }
+        return 0;
+    }
 
     if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
 
@@ -60,7 +90,9 @@ static i16 update_game(Window* window, i16 step) {
 
     if (stage_update(game->stage, step)) {
 
-        window_start_transition(window, true, 2, next_level);
+        game->victory = true;
+        game->waitTimer = WAIT_TIME;
+        game->waitDrawn = false;
         return 0;
     }
 
@@ -129,6 +161,55 @@ static void draw_background(Canvas* canvas) {
 }
 
 
+static void draw_waiting_text(Canvas* canvas) {
+
+    const BOX_OFFSET_X = 8;
+    const BOX_OFFSET_Y = 6;
+
+    u16 w, h;
+    i16 boxW, boxH;
+    i16 x, y;
+    char buffer [32];
+
+    canvas_get_size(canvas, &w, &h);
+    canvas_toggle_clipping(canvas, false);
+
+    if (game->victory) {
+
+        snprintf(buffer, 32, "STAGE CLEAR");
+    }
+    else {
+
+        snprintf(buffer, 32, "STAGE %u", game->stageIndex+1);
+    }
+
+    boxW = ((i16) strlen(buffer) + 1) * 8 + BOX_OFFSET_X*2;
+    boxH = 8 + BOX_OFFSET_Y*2;
+
+    x = w/2 - boxW/2;
+    y = h/2 - boxH/2;
+
+    canvas_fill_rect(canvas, x, y, boxW, boxH, 0);
+    canvas_fill_rect(canvas, x+1, y+1, boxW-2, boxH-2, 255);
+    canvas_fill_rect(canvas, x+2, y+2, boxW-4, boxH-4, 0);
+
+    canvas_darken(canvas, 1);
+
+    if (game->victory) {
+
+        canvas_draw_text_fast(canvas, game->bmpFont,
+            "STAGE CLEAR!", w/2, h/2-4, 0, 0, ALIGN_CENTER);
+    }
+    else {
+
+        canvas_draw_text_fast(canvas, game->bmpFont,
+            buffer, w/2, h/2-4, 0, 0, ALIGN_CENTER);
+    }
+
+    canvas_toggle_clipping(canvas, true);
+}
+
+
 static void redraw_game(Canvas* canvas) {
 
     if (game->paused) {
@@ -148,10 +229,19 @@ static void redraw_game(Canvas* canvas) {
     }
 
     stage_draw(game->stage, canvas, game->bmpStaticTiles, game->bmpDynamicTiles);
+
+    if (game->waitTimer > 0) {
+
+        if (!game->waitDrawn) {
+
+            draw_waiting_text(canvas);
+            game->waitDrawn = true;
+        }
+    }
 }
 
 
-i16 init_game_scene() {
+i16 init_game_scene(Window* window) {
 
     game = (Game*) calloc(1, sizeof(Game));
     if (game == NULL) {
@@ -186,6 +276,12 @@ i16 init_game_scene() {
         false);
 
     game->backgroundDrawn = false;
+
+    game->victory = false;
+    game->waitTimer = WAIT_TIME;
+    game->waitDrawn = false;
+
+    window_start_transition(window, false, 2, NULL);
 
     return 0;
 }
