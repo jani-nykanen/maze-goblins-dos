@@ -609,12 +609,14 @@ static void undo(_Stage* stage) {
 }
 
 
-static void control(_Stage* stage) {
+static void control(_Stage* stage, AudioSystem* audio) {
 
     Action a = ACTION_NONE;
 
     if (keyboard_get_normal_key(KEY_Z) == STATE_PRESSED ||
         keyboard_get_normal_key(KEY_BACKSPACE) == STATE_PRESSED) {
+
+        audio_play_predefined_sample(audio, SAMPLE_CHOOSE);
 
         undo(stage);
         return;
@@ -644,6 +646,11 @@ static void control(_Stage* stage) {
         stage->animType = ANIMATION_MOVE;
         stage->animationTimer = ANIMATION_TIME;
         stage->animDir = a-1;
+
+        if (stage->nonPlayerMoved) {
+
+            audio_play_predefined_sample(audio, SAMPLE_MOVE_BEEP);
+        }
     }
 }
 
@@ -666,7 +673,7 @@ static u8 get_connection_count(_Stage* stage, i16 x, i16 y) {
 }
 
 
-static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
+static bool check_effects(_Stage* stage, AudioSystem* audio, bool nonPlayerMoved) {
 
     static const i16 MIN_CONNECTION = 2;
 
@@ -696,10 +703,16 @@ static bool check_effects(_Stage* stage, bool nonPlayerMoved) {
 
             if (id == 2) {
 
+                // Star
                 if (stage->bottomLayer[i] == 8) {
 
                     stage->bottomLayer[i] = 0;
                     -- stage->starCount;
+
+                    if (audio != NULL) {
+
+                        audio_play_predefined_sample(audio, SAMPLE_STAR);
+                    }
                 }
                 continue;
             }
@@ -834,7 +847,7 @@ static bool clear_destroyed_objects(_Stage* stage) {
 
     if (buttonWithoutObject) {
 
-        return check_effects(stage, false) == ANIMATION_TOGGLE_WALLS;
+        return check_effects(stage, NULL, false) == ANIMATION_TOGGLE_WALLS;
     }
     return false;
 }
@@ -854,7 +867,7 @@ static void store_state(_Stage* stage) {
 }
 
 
-static void update_animation(_Stage* stage, i16 step) {
+static void update_animation(_Stage* stage, AudioSystem* audio, i16 step) {
 
     const i16 ANIM_SPEED = 24;
 
@@ -873,18 +886,22 @@ static void update_animation(_Stage* stage, i16 step) {
         }
         else if (stage->animType == ANIMATION_MOVE) {
 
-            stage->animType = check_effects(stage, stage->nonPlayerMoved);
+            stage->animType = check_effects(stage, audio, stage->nonPlayerMoved);
 
             if (stage->nonPlayerMoved &&
                 stage->animType == ANIMATION_DESTROY) {
 
                 stage->animationTimer = DESTROY_TIME;
                 cloneBuffer = false;
+
+                audio_play_predefined_sample(audio, SAMPLE_DESTROY);
             }
             else if (stage->animType == ANIMATION_TOGGLE_WALLS) {
 
                 stage->animationTimer = TOGGLE_TIME;
                 cloneBuffer = false;
+
+                audio_play_predefined_sample(audio, SAMPLE_TOGGLE_WALLS);
             }
         }
 
@@ -1068,6 +1085,7 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
 
     u16 w;
     u16 h;
+    i16 i;
 
     // strlen shoud work here, but it possibly causes
     // some weird bugs where the filtering fails to work
@@ -1101,21 +1119,26 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
     stage->wallStateBuffer[0] = stage->wallState;
 
     stage->starCount = compute_stars(stage);
+
+    for (i = 0; i < stage->dustCount; ++ i) {
+
+        stage->dust[i].exist = false;
+    }
 }
 
 
-bool stage_update(Stage* _stage, i16 step) {
+bool stage_update(Stage* _stage, AudioSystem* audio, i16 step) {
 
     _Stage* stage = (_Stage*) _stage;
     i16 i;
 
     if (stage->animationTimer > 0) {
 
-        update_animation(stage, step);
+        update_animation(stage, audio, step);
     }
     else {
 
-        control(stage);
+        control(stage, audio);
     }
 
     for (i = 0; i < stage->dustCount; ++ i) {
@@ -1187,8 +1210,10 @@ bool stage_reset(Stage* _stage) {
     stage_init_tilemap(_stage, stage->baseMap, true);
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
 
-    store_state(stage);
+    stage->starCount = compute_stars(stage);
 
+    store_state(stage);
+    
     return true;
 }
 

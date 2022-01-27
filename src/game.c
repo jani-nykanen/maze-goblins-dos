@@ -92,7 +92,7 @@ static i16 update_game(Window* window, i16 step) {
     }
     if (game->paused) return 0;
 
-    if (stage_update(game->stage, step)) {
+    if (stage_update(game->stage, audio, step)) {
 
         game->victory = true;
         game->waitTimer = WAIT_TIME;
@@ -102,7 +102,10 @@ static i16 update_game(Window* window, i16 step) {
 
     if (keyboard_get_normal_key(KEY_R) == STATE_PRESSED) {
 
-        stage_reset(game->stage);
+        if (stage_reset(game->stage)) {
+
+            audio_play_predefined_sample(audio, SAMPLE_SELECT);
+        }
     }
 
     return 0;

@@ -5,6 +5,7 @@
 #include "types.h"
 #include "tilemap.h"
 #include "canvas.h"
+#include "audio.h"
 
 
 EMPTY_STRUCT(Stage);
@@ -18,7 +19,7 @@ void dispose_stage(Stage* stage);
 
 void stage_init_tilemap(Stage* stage, Tilemap* tilemap, bool resetting);
 
-bool stage_update(Stage* stage, i16 step);
+bool stage_update(Stage* stage, AudioSystem* audio, i16 step);
 void stage_draw(Stage* stage, Canvas* canvas, 
     Bitmap* staticTiles, Bitmap* dynamicTiles);
 

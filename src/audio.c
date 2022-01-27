@@ -116,10 +116,15 @@ void audio_play_sequence(AudioSystem* _audio, const i16* seq, i16 len) {
 
     for (i = 0; i < len; i += 2) {
 
-        if (seq[i*2] <= 0 || seq[i*2 + 1] <= 0)
+        if (seq[i] <= 0 || seq[i + 1] <= 0)
             break;
 
-        add_sound(audio, seq[i*2], seq[i*2 + 1]);
+        add_sound(audio, seq[i], seq[i + 1]);
+    }
+
+    if (audio->bufferPointer < audio->bufferSize) {
+
+        add_sound(audio, -1, -1);
     }
 }
 
