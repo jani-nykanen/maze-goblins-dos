@@ -3,6 +3,7 @@
 
 
 #include "canvas.h"
+#include "audio.h"
 
 
 // A virtual window, to make SDL2 etc. ports
@@ -26,6 +27,8 @@ void window_make_active(Window* window);
 
 void window_start_transition(Window* window,
     bool fadeOut, i16 speed, TransitionCallback cb);
+
+AudioSystem* window_get_audio_system(Window* window);
 
 
 #endif // PROJECTNAME_WINDOW_H

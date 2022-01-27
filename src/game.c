@@ -55,6 +55,8 @@ static void next_level(Window* window) {
 
 static i16 update_game(Window* window, i16 step) {
 
+    AudioSystem* audio = window_get_audio_system(window);
+
     if (game->waitTimer > 0) {
 
         game->waitTimer -= step;
@@ -74,6 +76,8 @@ static i16 update_game(Window* window, i16 step) {
     }
 
     if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
+
+        audio_play_predefined_sample(audio, SAMPLE_PAUSE);
 
         game->paused = !game->paused;
         if (game->paused) {

@@ -1,6 +1,5 @@
 #include "window.h"
 #include "system.h"
-#include "canvas.h"
 #include "keyb.h"
 #include "palette.h"
 
@@ -21,6 +20,7 @@ static const i16 TRANSITION_TIME = 70;
 typedef struct {
 
     Canvas* framebuffer;
+    AudioSystem* audio;
 
     i16 frameCounter;
     i16 frameSkip;
@@ -117,6 +117,7 @@ static bool loop(_Window* window) {
         }
 
         update_transition(window, window->frameSkip+1);
+        audio_update(window->audio, window->frameSkip+1);
 
         if (check_default_key_shortcuts())
             return true;
@@ -156,6 +157,13 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
     }
     canvas_clear(w->framebuffer, 32);
 
+    w->audio = new_audio_system(64);
+    if (w->audio == NULL) {
+
+        dispose_window((Window*) w);
+        return NULL;
+    }
+
     init_graphics();
     init_keyboard_listener();
 
@@ -184,6 +192,7 @@ void dispose_window(Window* _window) {
     if (window == NULL) return;
 
     dispose_canvas(window->framebuffer);
+    dispose_audio_system(window->audio);
     m_free(window);
 }
 
@@ -216,4 +225,10 @@ void window_start_transition(Window* _window,
     window->fadingOut = fadeOut;
     window->transitionTimer = TRANSITION_TIME;
     window->transitionCb = cb;
+}
+
+
+AudioSystem* window_get_audio_system(Window* window) {
+
+    return ((_Window*) window)->audio;
 }
