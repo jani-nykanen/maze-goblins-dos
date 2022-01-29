@@ -11,7 +11,7 @@
 EMPTY_STRUCT(Window);
 
 
-typedef i16 (*UpdateCallback) (Window*, i16);
+typedef void (*UpdateCallback) (Window*, i16);
 typedef void (*RedrawCallback) (Canvas*);
 typedef void (*TransitionCallback) (Window*);
 
@@ -29,6 +29,8 @@ void window_start_transition(Window* window,
     bool fadeOut, i16 speed, TransitionCallback cb);
 
 AudioSystem* window_get_audio_system(Window* window);
+
+void window_terminate(Window* window);
 
 
 #endif // PROJECTNAME_WINDOW_H

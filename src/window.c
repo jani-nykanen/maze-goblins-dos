@@ -24,6 +24,7 @@ typedef struct {
 
     i16 frameCounter;
     i16 frameSkip;
+    bool running;
 
     UpdateCallback update;
     RedrawCallback redraw;
@@ -51,14 +52,13 @@ static void init_graphics() {
 }
 
 
-static bool check_default_key_shortcuts() {
+static void check_default_key_shortcuts(_Window* window) {
 
     if (keyboard_get_normal_key(KEY_Q) == STATE_PRESSED &&
         (keyboard_get_normal_key(KEY_LCTRL) & STATE_DOWN_OR_PRESSED)) {
 
-        return true;
+        window->running = false;
     }
-    return false;
 }
 
 
@@ -104,7 +104,7 @@ static void update_transition(_Window* window, i16 step) {
 }
 
 
-static bool loop(_Window* window) {
+static void loop(_Window* window) {
 
     if ( (window->frameCounter ++) == window->frameSkip) {
 
@@ -112,15 +112,13 @@ static bool loop(_Window* window) {
     
         if (window->update != NULL && window->transitionTimer <= 0) {
 
-            if (window->update((Window*) window, window->frameSkip+1))
-                return true;
+            window->update((Window*) window, window->frameSkip+1);
         }
 
         update_transition(window, window->frameSkip+1);
         audio_update(window->audio, window->frameSkip+1);
 
-        if (check_default_key_shortcuts())
-            return true;
+        check_default_key_shortcuts(window);
         keyboard_update();
 
         if (window->redraw != NULL) {
@@ -135,8 +133,6 @@ static bool loop(_Window* window) {
 
         vblank();
     }
-
-    return false;
 }
 
 
@@ -178,6 +174,8 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
     w->fadingOut = false;
     w->transitionSpeed = 1;
 
+    w->running = false;
+
     return (Window*) w;
 }
 
@@ -212,7 +210,12 @@ void window_make_active(Window* _window) {
 
     _Window* window = (_Window*) _window;
 
-    while (!loop(window));
+    window->running = true;
+
+    while (window->running) {
+
+        loop(window);
+    }
 }
 
 
@@ -232,3 +235,11 @@ AudioSystem* window_get_audio_system(Window* window) {
 
     return ((_Window*) window)->audio;
 }
+
+
+void window_terminate(Window* _window) {
+
+    _Window* window = (_Window*) _window;
+
+    window->running = false;
+}   

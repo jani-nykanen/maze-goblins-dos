@@ -1200,12 +1200,14 @@ void stage_get_size(Stage* _stage, i16* width, i16* height) {
 }
 
 
-bool stage_reset(Stage* _stage) {
+bool stage_reset(Stage* _stage, bool force) {
 
     _Stage* stage = (_Stage*) _stage;
 
-    if (stage->animationTimer > 0)
+    if (!force && stage->animationTimer > 0)
         return false;
+
+    stage->animationTimer = 0;
 
     stage_init_tilemap(_stage, stage->baseMap, true);
     memset(stage->redrawBuffer, 1, stage->width*stage->height);

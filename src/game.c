@@ -3,6 +3,7 @@
 #include "tilemap.h"
 #include "stage.h"
 #include "keyb.h"
+#include "menu.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,6 +12,14 @@
 
 static const i16 WAIT_TIME = 70;
 
+static const u8* BUTTON_NAMES[] = {
+
+    "RESUME",
+    "RESTART",
+    "AUDIO: ON ",
+    "QUIT GAME"
+};
+
 
 typedef struct {
 
@@ -18,10 +27,13 @@ typedef struct {
     Bitmap* bmpDynamicTiles;
     Bitmap* bmpBorders;
     Bitmap* bmpFont;
+    Bitmap* bmpFontYellow;
 
     TilemapPack* baseLevels;
 
     Stage* stage;
+
+    Menu* pauseMenu;
 
     bool backgroundDrawn;
     bool pauseDrawn;
@@ -36,6 +48,48 @@ typedef struct {
 } Game;
 
 static Game* game = NULL;
+
+
+static void menu_callback(Menu* menu, i16 button, Window* window) {
+
+    bool audioState;
+    AudioSystem* audio;
+
+    switch (button) {
+
+    case 1:
+        stage_reset(game->stage, true);
+
+    // Fall through wheeeeee
+    case 0:
+
+        menu_deactivate(menu);
+        stage_force_redraw(game->stage);
+        game->backgroundDrawn = false;
+        game->paused = false;
+        break;
+
+    case 2:
+
+        audio = window_get_audio_system(window);
+        audioState = audio_is_enabled(audio);
+
+        audio_toggle(audio, !audioState);
+
+        menu_change_button_text(menu, button, 
+            !audioState ? "AUDIO: ON " : "AUDIO: OFF");
+
+        break;
+
+    case 3:
+
+        window_terminate(window);
+        break;
+
+    default:
+        break;
+    }
+}
 
 
 static void next_level(Window* window) {
@@ -53,7 +107,7 @@ static void next_level(Window* window) {
 }
 
 
-static i16 update_game(Window* window, i16 step) {
+static void update_game(Window* window, i16 step) {
 
     AudioSystem* audio = window_get_audio_system(window);
 
@@ -72,43 +126,40 @@ static i16 update_game(Window* window, i16 step) {
                 stage_force_redraw(game->stage);
             }
         }
-        return 0;
+        return;
     }
 
-    if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
+    if (!game->paused &&
+        keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
 
         audio_play_predefined_sample(audio, SAMPLE_PAUSE);
 
-        game->paused = !game->paused;
-        if (game->paused) {
-
-            game->pauseDrawn = false;
-        }
-        else {
-
-            stage_force_redraw(game->stage);
-            game->backgroundDrawn = false;
-        }
+        game->paused = true;
+        game->pauseDrawn = false;
+        
+        menu_activate(game->pauseMenu, 0);
     }
-    if (game->paused) return 0;
+    else if (game->paused) {
+
+        menu_update(game->pauseMenu, window);
+        return;
+    }
 
     if (stage_update(game->stage, audio, step)) {
 
         game->victory = true;
         game->waitTimer = WAIT_TIME;
         game->waitDrawn = false;
-        return 0;
+        return;
     }
 
     if (keyboard_get_normal_key(KEY_R) == STATE_PRESSED) {
 
-        if (stage_reset(game->stage)) {
+        if (stage_reset(game->stage, false)) {
 
             audio_play_predefined_sample(audio, SAMPLE_SELECT);
         }
     }
-
-    return 0;
 }
 
 
@@ -226,6 +277,14 @@ static void redraw_game(Canvas* canvas) {
             canvas_darken(canvas, 2);
             game->pauseDrawn = true;
         }
+
+        canvas_toggle_clipping(canvas, false);
+
+        menu_draw(game->pauseMenu, canvas, 
+            game->bmpFont, game->bmpFontYellow, 
+            0, 0, 0, 2);
+
+        canvas_toggle_clipping(canvas, true);
         return;
     }
 
@@ -262,6 +321,7 @@ i16 init_game_scene(Window* window) {
     if ((game->bmpStaticTiles = load_bitmap("STATIC.BIN")) == NULL ||
         (game->bmpDynamicTiles = load_bitmap("DYNAMIC.BIN")) == NULL ||
         (game->bmpFont = load_bitmap("FONT.BIN")) == NULL ||
+        (game->bmpFontYellow = load_bitmap("FONT2.BIN")) == NULL ||
         (game->bmpBorders = load_bitmap("BORDERS.BIN")) == NULL ||
         (game->baseLevels = load_tilemap_pack("LEVELS.BIN")) == NULL) {
 
@@ -281,6 +341,12 @@ i16 init_game_scene(Window* window) {
     stage_init_tilemap(game->stage, 
         tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
         false);
+
+    game->pauseMenu = new_menu(BUTTON_NAMES, 4, menu_callback);
+    if (game->pauseMenu == NULL) {
+
+        return 1;
+    } 
 
     game->backgroundDrawn = false;
 
@@ -302,6 +368,7 @@ void dispose_game_scene() {
     dispose_bitmap(game->bmpDynamicTiles);
     dispose_bitmap(game->bmpBorders);
     dispose_bitmap(game->bmpFont);
+    dispose_bitmap(game->bmpFontYellow);
 
     dispose_tilemap_pack(game->baseLevels);
 

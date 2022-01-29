@@ -21,6 +21,8 @@ typedef struct {
     i16 timer;
     u16 soundIndex;
 
+    bool enabled;
+
 } _AudioSystem;
 
 
@@ -77,6 +79,8 @@ AudioSystem* new_audio_system(u16 bufferSize) {
 
     audio->timer = 0;
 
+    audio->enabled = true;
+
     return (AudioSystem*) audio;
 }
 
@@ -90,12 +94,16 @@ void dispose_audio_system(AudioSystem* _audio) {
     m_free(audio->soundBuffer);
     m_free(audio->lengthBuffer);
     m_free(audio);
+
+    nosound();
 }
 
 
 void audio_play_sound(AudioSystem* _audio, i16 freq, i16 len) {
 
     _AudioSystem* audio = (_AudioSystem*) _audio;
+
+    if (!audio->enabled) return;
 
     audio->bufferPointer = 0;
     audio->soundIndex = 0;
@@ -109,7 +117,8 @@ void audio_play_sequence(AudioSystem* _audio, const i16* seq, i16 len) {
     i16 i;
     _AudioSystem* audio = (_AudioSystem*) _audio;
 
-    if (len % 2 != 0) return;
+    if (!audio->enabled ||
+        len % 2 != 0) return;
 
     audio->bufferPointer = 0;
     audio->soundIndex = 0;
@@ -162,4 +171,17 @@ void audio_update(AudioSystem* _audio, i16 step) {
             }
         }
     }
+}
+
+
+
+bool audio_is_enabled(AudioSystem* audio) {
+
+    return ((_AudioSystem*) audio)->enabled;
+}
+
+
+void audio_toggle(AudioSystem* audio, bool state) {
+
+    ((_AudioSystem*) audio)->enabled = state;
 }

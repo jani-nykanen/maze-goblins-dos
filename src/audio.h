@@ -36,5 +36,7 @@ void audio_play_predefined_sample(AudioSystem* audio, PredefinedSample name);
 
 void audio_update(AudioSystem* audio, i16 step);
 
+bool audio_is_enabled(AudioSystem* audio);
+void audio_toggle(AudioSystem* audio, bool state);
 
 #endif //PROJECTNAME_AUDIO_H

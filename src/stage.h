@@ -25,7 +25,7 @@ void stage_draw(Stage* stage, Canvas* canvas,
 
 void stage_get_size(Stage* stage, i16* width, i16* height);
 
-bool stage_reset(Stage* stage);
+bool stage_reset(Stage* stage, bool force);
 void stage_force_redraw(Stage* stage);
 
 
