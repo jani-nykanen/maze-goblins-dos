@@ -20,6 +20,12 @@ static const u8* BUTTON_NAMES[] = {
     "QUIT GAME"
 };
 
+static const u8* YES_NO_NAMES[] = {
+
+    "YES",
+    "NO"
+};
+
 
 typedef struct {
 
@@ -34,6 +40,9 @@ typedef struct {
     Stage* stage;
 
     Menu* pauseMenu;
+    Menu* yesNoMenu;
+    i16 quitPhase;
+    bool yesNoDrawn;
 
     bool backgroundDrawn;
     bool pauseDrawn;
@@ -48,6 +57,86 @@ typedef struct {
 } Game;
 
 static Game* game = NULL;
+
+
+static void force_pause_redraw() {
+
+    game->backgroundDrawn = false;
+    stage_force_redraw(game->stage);
+    game->pauseDrawn = false;
+}
+
+
+static i16 save_progress() {
+
+    #define SAVE_PATH "SAVE.DAT"
+
+    u8 out;
+
+    FILE* f = fopen(SAVE_PATH, "wb");
+    if (f == NULL) {
+
+        m_throw_error("Failed to create a file in ", SAVE_PATH, NULL);
+        return 1;
+    }
+
+    out = (u8) game->stageIndex;
+    if (fwrite(&out, sizeof(u8), 1, f) != 1) {
+
+        m_throw_error("Failed to write data to a file in ", SAVE_PATH, NULL);
+        fclose(f);
+        return 1;
+    }
+
+    fclose(f);
+
+    return 0;
+
+    #undef SAVE_PATH
+}
+
+
+static void yes_no_callback(Menu* menu, i16 button, Window* window) {
+
+    // Yes
+    if (button == 0) {
+
+        if (game->quitPhase == 1) {
+
+            ++ game->quitPhase;
+            menu_activate(game->yesNoMenu, 0);
+
+            game->yesNoDrawn = false;
+        }
+        else {
+
+            if (save_progress()) {
+
+                window_terminate(window);
+                return;
+            }
+
+            // TODO: Return to the main menu!
+            window_terminate(window);
+        }
+    }
+    // No
+    else if (button == 1) {
+
+        if (game->quitPhase == 1) {
+            
+            game->quitPhase = 0;
+            menu_deactivate(game->yesNoMenu);
+            menu_activate(game->pauseMenu, 3);
+        }
+        else {
+
+            window_terminate(window);
+        }
+    }
+
+    force_pause_redraw();
+}
 
 
 static void menu_callback(Menu* menu, i16 button, Window* window) {
@@ -83,7 +172,14 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
 
     case 3:
 
-        window_terminate(window);
+        game->quitPhase = 1;
+        game->yesNoDrawn = false;
+
+        force_pause_redraw();
+
+        menu_activate(game->yesNoMenu, 1);
+        menu_deactivate(game->pauseMenu);
+
         break;
 
     default:
@@ -136,12 +232,20 @@ static void update_game(Window* window, i16 step) {
 
         game->paused = true;
         game->pauseDrawn = false;
+        game->quitPhase = 0;
         
         menu_activate(game->pauseMenu, 0);
     }
     else if (game->paused) {
 
-        menu_update(game->pauseMenu, window);
+        if (game->quitPhase > 0) {
+
+            menu_update(game->yesNoMenu, window);
+        }
+        else {
+
+            menu_update(game->pauseMenu, window);
+        }
         return;
     }
 
@@ -268,7 +372,71 @@ static void draw_waiting_text(Canvas* canvas) {
 }
 
 
+static void draw_pause(Canvas* canvas) {
+
+    const BOX_OFFSET_X = 6;
+    const BOX_OFFSET_Y = 5;
+
+    const u8* MESSAGES[] = {
+        "Are you sure? ",
+        "Would you like\nto save your\nprogress?"
+    };
+
+    i16 x, y;
+    i16 dw, dh;
+    u16 w, h;
+
+    canvas_toggle_clipping(canvas, false);
+    
+    if (game->quitPhase == 0) {
+
+        menu_draw(game->pauseMenu, canvas, 
+            game->bmpFont, game->bmpFontYellow, 
+            0, 0, 0, 2);
+    }
+    else {
+
+        if (!game->yesNoDrawn) {
+
+            game->yesNoDrawn = true;
+
+            canvas_get_size(canvas, &w, &h);
+
+            // TODO: Numeric constants aaaargh
+
+            dw = 14*8; // Length of first message times 8
+            dh = (game->quitPhase == 1 ? 1 : 3) * 8;
+
+            x = (i16)(w / 2) - dw/2;
+            y = (i16)(h / 2) - dh/2; 
+
+            draw_box(canvas, x - BOX_OFFSET_X, 
+                y - BOX_OFFSET_Y,
+                dw + BOX_OFFSET_X*2,
+                dh + BOX_OFFSET_Y*2);
+
+            canvas_draw_text(canvas, game->bmpFont,
+                MESSAGES[game->quitPhase-1],
+                x, y, 0, 0, ALIGN_LEFT);
+        }
+        menu_draw(game->yesNoMenu, canvas, 
+            game->bmpFont, game->bmpFontYellow, 
+            0, 32, 0, 2);
+    }
+
+    canvas_toggle_clipping(canvas, true);
+}
+
+
 static void redraw_game(Canvas* canvas) {
+
+    if (!game->backgroundDrawn) {
+        
+        draw_background(canvas);
+        game->backgroundDrawn = true;
+    }
+
+    stage_draw(game->stage, canvas, game->bmpStaticTiles, game->bmpDynamicTiles);
 
     if (game->paused) {
 
@@ -278,23 +446,9 @@ static void redraw_game(Canvas* canvas) {
             game->pauseDrawn = true;
         }
 
-        canvas_toggle_clipping(canvas, false);
-
-        menu_draw(game->pauseMenu, canvas, 
-            game->bmpFont, game->bmpFontYellow, 
-            0, 0, 0, 2);
-
-        canvas_toggle_clipping(canvas, true);
+        draw_pause(canvas);
         return;
     }
-
-    if (!game->backgroundDrawn) {
-        
-        draw_background(canvas);
-        game->backgroundDrawn = true;
-    }
-
-    stage_draw(game->stage, canvas, game->bmpStaticTiles, game->bmpDynamicTiles);
 
     if (game->waitTimer > 0) {
 
@@ -348,11 +502,19 @@ i16 init_game_scene(Window* window) {
         return 1;
     } 
 
+    game->yesNoMenu = new_menu(YES_NO_NAMES, 2, yes_no_callback);
+    if (game->yesNoMenu == NULL) {
+
+        return 1;
+    }
+
     game->backgroundDrawn = false;
 
     game->victory = false;
     game->waitTimer = WAIT_TIME;
     game->waitDrawn = false;
+    game->quitPhase = 0;
+    game->yesNoDrawn = false;
 
     window_start_transition(window, false, 2, NULL);
 

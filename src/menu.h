@@ -12,6 +12,9 @@ EMPTY_STRUCT(Menu);
 typedef void (*MenuCallback)(Menu*, i16 button, Window*);
 
 
+void draw_box(Canvas* canvas, i16 x, i16 y, i16 w, i16 h);
+
+
 Menu* new_menu(const char* buttonText[], u16 buttonCount, MenuCallback cb);
 void dispose_menu(Menu* menu);
 

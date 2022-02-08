@@ -44,6 +44,19 @@ static u16 find_longest_button_name(_Menu* menu) {
 }
 
 
+void draw_box(Canvas* canvas, i16 x, i16 y, i16 w, i16 h) {
+
+    const u8 COLORS[] = {10, 0, 255};
+
+    i16 i;
+
+    for (i = 2; i >= 0; -- i) {
+
+        canvas_fill_rect(canvas, x-i, y-i, w+i*2, h+i*2, COLORS[i]);
+    }
+}
+
+
 Menu* new_menu(const char* buttonText[], u16 buttonCount, MenuCallback cb) {
 
     u16 i;
@@ -148,8 +161,6 @@ void menu_draw(Menu* _menu, Canvas* canvas,
     static const i16 BOX_OFFSET_X = 6;
     static const i16 BOX_OFFSET_Y = 5; 
 
-    const u8 COLORS[] = {10, 0, 255};
-
     _Menu* menu = (_Menu*) _menu;
     Bitmap* bmp;
 
@@ -163,7 +174,6 @@ void menu_draw(Menu* _menu, Canvas* canvas,
     bw = (i16) (menu->longestButtonNameLength * (8 + xoff)) ;
     bh = menu->buttonCount * (8 + yoff);
 
-
     // TODO: Do not assume the width of a character, obtain from the 
     // given bitmap(s)
     dx = (i16) (w / 2) - (i16) (bw / 2) + x;
@@ -172,13 +182,9 @@ void menu_draw(Menu* _menu, Canvas* canvas,
     // Box
     if (!menu->drawn) {
 
-        for (i = 2; i >= 0; -- i) {
-
-            canvas_fill_rect(canvas,
-                dx - BOX_OFFSET_X - i, dy - BOX_OFFSET_Y - i,
-                bw + BOX_OFFSET_X*2 + i*2, bh + BOX_OFFSET_Y*2 + i*2,
-                COLORS[i]);
-        }
+        draw_box(canvas,
+            dx - BOX_OFFSET_X, dy - BOX_OFFSET_Y,
+            bw + BOX_OFFSET_X*2, bh + BOX_OFFSET_Y*2);
     }   
 
     for (i = 0; i < menu->buttonCount; ++ i) {
