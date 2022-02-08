@@ -53,5 +53,8 @@ void canvas_set_global_hue(Canvas* canvas, i16 hue);
 
 void canvas_get_size(Canvas* canvas, u16* w, u16* h);
 
+void canvas_store_to_buffer(Canvas* canvas);
+void canvas_draw_buffered_image(Canvas* canvas);
+
 
 #endif // PROJECTNAME_CANVAS_H

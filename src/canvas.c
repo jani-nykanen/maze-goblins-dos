@@ -69,6 +69,7 @@ typedef struct {
     u16 width;
     u16 height;
     u8* pixels;
+    u8* pixelBuffer;
 
     bool clippingEnabled;
     Rect_i16 clipArea;
@@ -172,6 +173,14 @@ Canvas* new_canvas(u16 width, u16 height) {
         return NULL;
     }
 
+    c->pixelBuffer = (u8*) calloc(width*height, sizeof(u8));
+    if (c->pixelBuffer == NULL) {
+
+        m_memory_error();
+        dispose_canvas((Canvas*) c);
+        return NULL;
+    }
+
     c->clippingEnabled = true;
     c->clipArea = rect_i16(0, 0, 320, 200);
 
@@ -188,6 +197,7 @@ void dispose_canvas(Canvas* _canvas) {
     if (canvas == NULL) return;
 
     m_free(canvas->pixels);
+    m_free(canvas->pixelBuffer);
     m_free(canvas);
 }
 
@@ -394,4 +404,20 @@ void canvas_get_size(Canvas* _canvas, u16* w, u16* h) {
 
     *w = canvas->width;
     *h = canvas->height;
+}
+
+
+void canvas_store_to_buffer(Canvas* _canvas) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    memcpy(canvas->pixelBuffer, canvas->pixels, canvas->width*canvas->height);
+}
+
+
+void canvas_draw_buffered_image(Canvas* _canvas) {
+
+    _Canvas* canvas = (_Canvas*) _canvas;
+
+    memcpy(canvas->pixels, canvas->pixelBuffer, canvas->width*canvas->height);
 }

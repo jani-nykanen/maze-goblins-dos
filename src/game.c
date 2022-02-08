@@ -45,7 +45,8 @@ typedef struct {
     bool yesNoDrawn;
 
     bool backgroundDrawn;
-    bool pauseDrawn;
+    bool bufferRedrawn;
+    bool bufferCloned;
     bool paused;
 
     u16 stageIndex;
@@ -61,9 +62,7 @@ static Game* game = NULL;
 
 static void force_pause_redraw() {
 
-    game->backgroundDrawn = false;
-    stage_force_redraw(game->stage);
-    game->pauseDrawn = false;
+    game->bufferRedrawn = false;
 }
 
 
@@ -231,7 +230,7 @@ static void update_game(Window* window, i16 step) {
         audio_play_predefined_sample(audio, SAMPLE_PAUSE);
 
         game->paused = true;
-        game->pauseDrawn = false;
+        game->bufferCloned = false;
         game->quitPhase = 0;
         
         menu_activate(game->pauseMenu, 0);
@@ -430,6 +429,27 @@ static void draw_pause(Canvas* canvas) {
 
 static void redraw_game(Canvas* canvas) {
 
+    if (game->paused) {
+
+        if (!game->bufferCloned) {
+
+            canvas_darken(canvas, 2);
+            canvas_store_to_buffer(canvas);
+
+            game->bufferCloned = true;
+            game->bufferRedrawn = true;
+        }
+
+        if (!game->bufferRedrawn) {
+
+            canvas_draw_buffered_image(canvas);
+            game->bufferRedrawn = true;
+        }
+
+        draw_pause(canvas);
+        return;
+    }
+
     if (!game->backgroundDrawn) {
         
         draw_background(canvas);
@@ -437,18 +457,6 @@ static void redraw_game(Canvas* canvas) {
     }
 
     stage_draw(game->stage, canvas, game->bmpStaticTiles, game->bmpDynamicTiles);
-
-    if (game->paused) {
-
-        if (!game->pauseDrawn) {
-
-            canvas_darken(canvas, 2);
-            game->pauseDrawn = true;
-        }
-
-        draw_pause(canvas);
-        return;
-    }
 
     if (game->waitTimer > 0) {
 
@@ -515,6 +523,7 @@ i16 init_game_scene(Window* window) {
     game->waitDrawn = false;
     game->quitPhase = 0;
     game->yesNoDrawn = false;
+    game->bufferCloned = false;
 
     window_start_transition(window, false, 2, NULL);
 
