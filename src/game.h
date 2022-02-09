@@ -3,9 +3,10 @@
 
 
 #include "window.h"
+#include "assets.h"
 
 
-i16 init_game_scene(Window* window);
+i16 init_game_scene(Window* window, AssetCache* assets);
 void dispose_game_scene();
 
 void register_game_scene(Window* window);

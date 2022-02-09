@@ -469,7 +469,7 @@ static void redraw_game(Canvas* canvas) {
 }
 
 
-i16 init_game_scene(Window* window) {
+i16 init_game_scene(Window* window, AssetCache* assets) {
 
     game = (Game*) calloc(1, sizeof(Game));
     if (game == NULL) {
@@ -482,14 +482,15 @@ i16 init_game_scene(Window* window) {
 
     if ((game->bmpStaticTiles = load_bitmap("STATIC.BIN")) == NULL ||
         (game->bmpDynamicTiles = load_bitmap("DYNAMIC.BIN")) == NULL ||
-        (game->bmpFont = load_bitmap("FONT.BIN")) == NULL ||
-        (game->bmpFontYellow = load_bitmap("FONT2.BIN")) == NULL ||
         (game->bmpBorders = load_bitmap("BORDERS.BIN")) == NULL ||
         (game->baseLevels = load_tilemap_pack("LEVELS.BIN")) == NULL) {
 
         dispose_game_scene();
         return 1;
     }
+
+    game->bmpFont = asset_cache_get_bitmap(assets, "font_white");
+    game->bmpFontYellow = asset_cache_get_bitmap(assets, "font_yellow");
 
     init_stage();
     game->stage = new_stage(10, 9);

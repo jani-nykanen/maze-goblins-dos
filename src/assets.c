@@ -11,10 +11,13 @@
 #define MAX_NAME_LENGTH 64
 
 
+typedef u8 Name [MAX_NAME_LENGTH];
+
+
 typedef struct {
 
     Bitmap** bitmaps;
-    u8* names [MAX_NAME_LENGTH];
+    Name* names;
     u16 assetMax;
 
 } _AssetCache;
@@ -37,7 +40,7 @@ static i16 find_index(_AssetCache* assets, const str name) {
 
 AssetCache* new_asset_cache(u16 maxSize) {
 
-
+    i16 i;
     _AssetCache* assets = (_AssetCache*) calloc(1, sizeof(_AssetCache));
     if (assets == NULL) {
 
@@ -53,6 +56,20 @@ AssetCache* new_asset_cache(u16 maxSize) {
         m_memory_error();
         dispose_asset_cache((AssetCache*) assets);
         return NULL;
+    }
+
+    assets->names = (Name*) calloc(maxSize, sizeof(Name));
+    if (assets->names == NULL) {
+
+        m_memory_error();
+        dispose_asset_cache((AssetCache*) assets);
+        return NULL;
+    }
+
+    // Should be NULL by default, but let's play safe
+    for (i = 0; i < maxSize; ++ i) {
+
+        assets->bitmaps[i] = NULL;
     }
 
     return (AssetCache*) assets;
@@ -72,6 +89,7 @@ void dispose_asset_cache(AssetCache* _assets) {
         dispose_bitmap(assets->bitmaps[i]);
     }
     m_free(assets->bitmaps);
+    m_free(assets->names);
     m_free(assets);
 }
 
@@ -95,6 +113,7 @@ void asset_cache_store_bitmap(AssetCache* _assets, Bitmap* bitmap, const str nam
     // No room
     if (index == -1) return;
 
+    // snprintf(assets->names[index], MAX_NAME_LENGTH, "%s", name);
     strcpy(assets->names[index], name);
     assets->bitmaps[index] = bitmap;
 }
