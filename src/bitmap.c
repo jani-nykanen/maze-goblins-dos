@@ -126,6 +126,37 @@ Bitmap* create_bitmap_from_data(u16 width, u16 height,
 }
 
 
+Bitmap* create_monochrome_bitmap_from_data(u16 width, u16 height, u8* pixels) {
+
+    u16 i, j;
+    u16 shift;
+    u8 mask;
+
+    _Bitmap* bmp = (_Bitmap*) new_bitmap(width, height, false);
+    if (bmp == NULL) {
+
+        return NULL;
+    }
+
+    j = 0;
+    for (i = 0; i < width*height; ++ i) {
+
+        shift = (7 - (i % 8));
+        mask = 1 << shift;
+
+        bmp->pixels[i] = 255 * ((pixels[j] & mask) >> shift);
+
+        if (i % 8 == 7) 
+            ++ j;
+    }
+
+    bmp->width = width;
+    bmp->height = height;
+
+    return (Bitmap*) bmp;
+}
+
+
 Bitmap* load_bitmap(str path) {
 
     _Bitmap* bmp = NULL;
@@ -186,4 +217,13 @@ void dispose_bitmap(Bitmap* _bmp) {
     m_free(bmp->pixels);
     m_free(bmp->mask);
     m_free(bmp);
+}
+
+
+void bitmap_get_size(Bitmap* _bmp, u16* w, u16* h) {
+
+    _Bitmap* bmp = (_Bitmap*) _bmp;
+
+    *w = bmp->width;
+    *h = bmp->height;
 }

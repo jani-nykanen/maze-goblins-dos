@@ -32,5 +32,8 @@ AudioSystem* window_get_audio_system(Window* window);
 
 void window_terminate(Window* window);
 
+void window_bind_loading_bitmap(Window* window, Bitmap* bmp);
+void window_draw_loading_screen(Window* window);
+
 
 #endif // PROJECTNAME_WINDOW_H

@@ -12,4 +12,6 @@ mkdir -p bin
 ./tools/bin/png2bin "$IN"dynamic_tiles.png "$OUT"DYNAMIC.BIN
 ./tools/bin/png2bin "$IN"borders.png "$OUT"BORDERS.BIN
 
+./tools/bin/mono2src "$IN"loading.png src/loading.h
+
 ./tools/bin/tmx2bin ./bin/LEVELS.BIN ./assets/levels/*.tmx

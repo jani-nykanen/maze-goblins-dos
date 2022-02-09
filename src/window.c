@@ -34,6 +34,8 @@ typedef struct {
     bool fadingOut;
     TransitionCallback transitionCb;
 
+    Bitmap* loadingBitmap;
+
 } _Window;
 
 
@@ -176,6 +178,8 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
 
     w->running = false;
 
+    w->loadingBitmap = NULL;
+
     return (Window*) w;
 }
 
@@ -242,4 +246,32 @@ void window_terminate(Window* _window) {
     _Window* window = (_Window*) _window;
 
     window->running = false;
+}   
+
+
+void window_bind_loading_bitmap(Window* _window, Bitmap* bmp) {
+
+    _Window* window = (_Window*) _window;
+
+    window->loadingBitmap = bmp;
+}
+
+
+void window_draw_loading_screen(Window* _window) {
+
+    _Window* window = (_Window*) _window;
+
+    u16 w, h;
+    u16 bw, bh;
+
+    bitmap_get_size(window->loadingBitmap, &bw, &bh);
+    canvas_get_size(window->framebuffer, &w, &h);
+
+    canvas_clear(window->framebuffer, 0);
+    canvas_draw_bitmap_fast(window->framebuffer, 
+        window->loadingBitmap,
+        w/2 - bw/2, h/2 - bh/2);
+
+    // vblank();  
+    copy_canvas_to_screen(window);
 }   

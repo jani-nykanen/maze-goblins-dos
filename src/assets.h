@@ -2,7 +2,7 @@
 #define PROJECTNAME_ASSETS_H
 
 
-#include <bitmap.h>
+#include "bitmap.h"
 
 
 EMPTY_STRUCT(AssetCache);

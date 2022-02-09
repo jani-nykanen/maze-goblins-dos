@@ -478,7 +478,7 @@ i16 init_game_scene(Window* window) {
         return 1;
     }
 
-    printf("Loading...\n");
+    window_draw_loading_screen(window);
 
     if ((game->bmpStaticTiles = load_bitmap("STATIC.BIN")) == NULL ||
         (game->bmpDynamicTiles = load_bitmap("DYNAMIC.BIN")) == NULL ||

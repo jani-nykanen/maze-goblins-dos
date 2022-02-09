@@ -4,6 +4,10 @@ png2bin:
 	mkdir -p ./tools/bin
 	gcc -o ./tools/bin/$@ ./tools/$@.c -lm 
 
+mono2src:
+	mkdir -p ./tools/bin
+	gcc -o ./tools/bin/$@ ./tools/$@.c -lm 
+
 tmx2bin:
 	mkdir -p ./tools/bin
 	gcc -o ./tools/bin/$@ ./tools/$@.c -lm 
