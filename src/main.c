@@ -2,6 +2,7 @@
 #include "system.h"
 #include "game.h"
 #include "assets.h"
+#include "title.h"
 
 #include <stdio.h>
 
@@ -96,7 +97,7 @@ i16 main() {
         return 1;
     }
 
-    if (init_game_scene(window, assets) != 0) {
+    if (init_title_screen_scene(window, assets) != 0) {
 
         dispose_window(window);
         dispose_bitmap(loadingBitmap);
@@ -106,13 +107,17 @@ i16 main() {
         return 1;
     }
     
-    register_game_scene(window);
+    register_title_screen_scene(window);
     window_make_active(window);
 
     dispose_bitmap(loadingBitmap);
     dispose_asset_cache(assets);
 
+    // We can dispose them all here, since if they
+    // are NULL already, nothing happens
+    dispose_title_screen_scene();
     dispose_game_scene();
+
     dispose_window(window);
 
     return 0;

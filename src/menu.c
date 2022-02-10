@@ -19,7 +19,6 @@ typedef struct {
     i16 oldCursorPos;
     bool active;
     bool drawn;
-    bool hintDrawn;
 
 } _Menu;
 
@@ -93,7 +92,6 @@ Menu* new_menu(const char* buttonText[], u16 buttonCount, MenuCallback cb) {
     menu->oldCursorPos = 0;
     menu->callback = cb;
     menu->drawn = false;
-    menu->hintDrawn = false;
 
     menu->longestButtonNameLength = find_longest_button_name(menu);
 
@@ -169,6 +167,8 @@ void menu_draw(Menu* _menu, Canvas* canvas,
     i16 bw, bh;
     i16 dx, dy;
 
+    if (!menu->active) return;
+
     canvas_get_size(canvas, &w, &h);
 
     bw = (i16) (menu->longestButtonNameLength * (8 + xoff)) ;
@@ -200,14 +200,6 @@ void menu_draw(Menu* _menu, Canvas* canvas,
         }
     }
 
-    // Draw hint
-    if (!menu->hintDrawn) {
-
-        canvas_draw_text(canvas, bmpFontYellow,
-            "HINT: Press Backspace\nor Z to undo a move.",
-            80, h-20, 0, 2, ALIGN_LEFT);
-    }
-
     menu->drawn = true;
 }
 
@@ -220,7 +212,6 @@ void menu_activate(Menu* _menu, i16 cursorPos) {
     menu->cursorPos = clamp_i16(cursorPos, 0, menu->buttonCount-1);
     menu->oldCursorPos = menu->cursorPos;
     menu->drawn = false;
-    menu->hintDrawn = false;
 }
 
 

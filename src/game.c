@@ -48,6 +48,7 @@ typedef struct {
     bool bufferRedrawn;
     bool bufferCloned;
     bool paused;
+    bool hintDrawn;
 
     u16 stageIndex;
 
@@ -232,6 +233,7 @@ static void update_game(Window* window, i16 step) {
         game->paused = true;
         game->bufferCloned = false;
         game->quitPhase = 0;
+        game->hintDrawn = false;
         
         menu_activate(game->pauseMenu, 0);
     }
@@ -423,6 +425,13 @@ static void draw_pause(Canvas* canvas) {
             0, 32, 0, 2);
     }
 
+    if (!game->hintDrawn) {
+
+        canvas_draw_text(canvas, game->bmpFontYellow,
+            "HINT: Press Backspace\nor Z to undo a move.",
+            80, h-20, 0, 2, ALIGN_LEFT);
+    }
+
     canvas_toggle_clipping(canvas, true);
 }
 
@@ -525,6 +534,7 @@ i16 init_game_scene(Window* window, AssetCache* assets) {
     game->quitPhase = 0;
     game->yesNoDrawn = false;
     game->bufferCloned = false;
+    game->hintDrawn = false;
 
     window_start_transition(window, false, 2, NULL);
 
@@ -539,8 +549,6 @@ void dispose_game_scene() {
     dispose_bitmap(game->bmpStaticTiles);
     dispose_bitmap(game->bmpDynamicTiles);
     dispose_bitmap(game->bmpBorders);
-    dispose_bitmap(game->bmpFont);
-    dispose_bitmap(game->bmpFontYellow);
 
     dispose_tilemap_pack(game->baseLevels);
 
