@@ -4,6 +4,7 @@
 #include "stage.h"
 #include "keyb.h"
 #include "menu.h"
+#include "title.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -56,9 +57,24 @@ typedef struct {
     bool victory;
     bool waitDrawn;
 
+    AssetCache* assets;
+
 } Game;
 
 static Game* game = NULL;
+
+
+static void go_to_title(Window* window) {
+
+    if (init_title_screen_scene(window, game->assets) != 0) {
+
+        window_terminate(window);
+        return;
+    }
+
+    dispose_game_scene();
+    register_title_screen_scene(window);
+}
 
 
 static void force_pause_redraw() {
@@ -110,14 +126,12 @@ static void yes_no_callback(Menu* menu, i16 button, Window* window) {
         }
         else {
 
-            if (save_progress()) {
+            if (save_progress() == 1) {
 
                 window_terminate(window);
                 return;
             }
-
-            // TODO: Return to the main menu!
-            window_terminate(window);
+            window_start_transition(window, true, 2, go_to_title);
         }
     }
     // No
@@ -128,10 +142,13 @@ static void yes_no_callback(Menu* menu, i16 button, Window* window) {
             game->quitPhase = 0;
             menu_deactivate(game->yesNoMenu);
             menu_activate(game->pauseMenu, 3);
+
+            game->hintDrawn = false;
         }
         else {
 
-            window_terminate(window);
+            window_start_transition(window, true, 2, go_to_title);
+            return;
         }
     }
 
@@ -387,6 +404,7 @@ static void draw_pause(Canvas* canvas) {
     i16 dw, dh;
     u16 w, h;
 
+    canvas_get_size(canvas, &w, &h);
     canvas_toggle_clipping(canvas, false);
     
     if (game->quitPhase == 0) {
@@ -394,14 +412,20 @@ static void draw_pause(Canvas* canvas) {
         menu_draw(game->pauseMenu, canvas, 
             game->bmpFont, game->bmpFontYellow, 
             0, 0, 0, 2);
+
+        if (!game->hintDrawn) {
+
+            canvas_draw_text(canvas, game->bmpFontYellow,
+                "HINT: Press Backspace\nor Z to undo a move.",
+                80, h-20, 0, 2, ALIGN_LEFT);
+            game->hintDrawn = true;
+        }
     }
     else {
 
         if (!game->yesNoDrawn) {
 
             game->yesNoDrawn = true;
-
-            canvas_get_size(canvas, &w, &h);
 
             // TODO: Numeric constants aaaargh
 
@@ -423,13 +447,6 @@ static void draw_pause(Canvas* canvas) {
         menu_draw(game->yesNoMenu, canvas, 
             game->bmpFont, game->bmpFontYellow, 
             0, 32, 0, 2);
-    }
-
-    if (!game->hintDrawn) {
-
-        canvas_draw_text(canvas, game->bmpFontYellow,
-            "HINT: Press Backspace\nor Z to undo a move.",
-            80, h-20, 0, 2, ALIGN_LEFT);
     }
 
     canvas_toggle_clipping(canvas, true);
@@ -478,7 +495,7 @@ static void redraw_game(Canvas* canvas) {
 }
 
 
-i16 init_game_scene(Window* window, AssetCache* assets) {
+i16 init_game_scene(Window* window, AssetCache* assets, u16 startIndex) {
 
     game = (Game*) calloc(1, sizeof(Game));
     if (game == NULL) {
@@ -486,6 +503,8 @@ i16 init_game_scene(Window* window, AssetCache* assets) {
         m_memory_error();
         return 1;
     }
+
+    game->assets = assets;
 
     window_draw_loading_screen(window);
 
@@ -509,7 +528,7 @@ i16 init_game_scene(Window* window, AssetCache* assets) {
         return 1;
     }
 
-    game->stageIndex = 0;
+    game->stageIndex = (u16) startIndex;
     stage_init_tilemap(game->stage, 
         tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
         false);

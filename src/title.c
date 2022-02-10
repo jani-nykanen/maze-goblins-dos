@@ -27,15 +27,44 @@ typedef struct {
     AssetCache* assets;
 
     bool backgroundDrawn;
+    bool load;
 
 } TitleScreen;
 
 static TitleScreen* title = NULL;
 
 
+static i16 load_data(const str path){
+
+    u8 b;
+    FILE* f = fopen(path, "rb");
+    if (f == NULL) {
+
+        return -1;
+    }
+
+    fread(&b, 1, 1, f);
+    fclose(f);
+
+    return (i16) b;
+}
+
+
 static void start_game_callback(Window* window) {
 
-    if (init_game_scene(window, title->assets) != 0) {
+    i16 index = -1;
+    u16 startIndex = 0; // TEMP, normally go to intro if index < 0
+
+    if (title->load) {
+
+        index = load_data("SAVE.DAT");
+        if (index >= 0) {
+
+            startIndex = (u16) index;
+        }
+    }
+
+    if (init_game_scene(window, title->assets, startIndex) != 0) {
 
         window_terminate(window);
         return;
@@ -57,12 +86,15 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
     bool audioState;
     AudioSystem* audio;
 
+    title->load = false;
+
     switch (button) {
 
-    // New game
-    case 0:
     // Load game
     case 1:
+        title->load = true;
+    // New game
+    case 0:
 
         window_start_transition(window, true, 2, start_game_callback);
         break;
@@ -132,6 +164,7 @@ i16 init_title_screen_scene(Window* window, AssetCache* assets) {
     title->bmpFontYellow = asset_cache_get_bitmap(assets, "font_yellow");
 
     title->backgroundDrawn = false;
+    title->load = false;
 
     title->titleMenu = new_menu(BUTTON_NAMES, 4, menu_callback);
     if (title->titleMenu == NULL) {

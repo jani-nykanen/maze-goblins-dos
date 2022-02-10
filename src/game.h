@@ -6,7 +6,7 @@
 #include "assets.h"
 
 
-i16 init_game_scene(Window* window, AssetCache* assets);
+i16 init_game_scene(Window* window, AssetCache* assets, u16 startIndex);
 void dispose_game_scene();
 
 void register_game_scene(Window* window);

@@ -264,6 +264,8 @@ void window_draw_loading_screen(Window* _window) {
     u16 w, h;
     u16 bw, bh;
 
+    canvas_set_global_hue(window->framebuffer, 0);
+
     bitmap_get_size(window->loadingBitmap, &bw, &bh);
     canvas_get_size(window->framebuffer, &w, &h);
 
