@@ -92,7 +92,7 @@ static bool clip_rect(_Canvas* canvas,
     // Right
     if (*x+*w >= canvas->clipArea.x + canvas->clipArea.w) {
 
-        *w -= (*x+*w) - (canvas->clipArea.x + canvas->clipArea.w);
+        *w -= (*x + *w) - (canvas->clipArea.x + canvas->clipArea.w);
     }
 
     // Top

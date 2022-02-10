@@ -33,6 +33,19 @@ typedef struct {
 static TitleScreen* title = NULL;
 
 
+static void start_game_callback(Window* window) {
+
+    if (init_game_scene(window, title->assets) != 0) {
+
+        window_terminate(window);
+        return;
+    }
+
+    dispose_title_screen_scene();
+    register_game_scene(window);
+}
+
+
 static void terminate_callback(Window* window) {
 
     window_terminate(window);
@@ -51,15 +64,7 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
     // Load game
     case 1:
 
-        if (init_game_scene(window, title->assets) != 0) {
-
-            window_terminate(window);
-            return;
-        }
-
-        dispose_title_screen_scene();
-        register_game_scene(window);
-
+        window_start_transition(window, true, 2, start_game_callback);
         break;
 
     // Toggle audio
@@ -101,10 +106,14 @@ static void draw_title_screen(Canvas* canvas) {
         title->backgroundDrawn = true;
     }
 
+    canvas_toggle_clipping(canvas, false);
+
     menu_draw(title->titleMenu, canvas,
         title->bmpFont,
         title->bmpFontYellow,
         0, 32, 0, 2);
+
+    canvas_toggle_clipping(canvas, true);
 }   
 
 
