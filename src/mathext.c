@@ -1,5 +1,7 @@
 #include "mathext.h"
 
+#include "sine.h"
+
 
 i16 min_i16(i16 x, i16 y) {
 
@@ -40,4 +42,16 @@ i16 round_i16(i16 x, i16 d) {
 i16 neg_mod_i16(i16 m, i16 n) {
 
     return ((m % n) + n) % n;
+}
+
+
+i16 fixed_sin(i16 angle) {
+
+    return SINE_TABLE[neg_mod_i16(angle, 360)];
+}
+
+
+i16 get_fixed_trig_precision() {
+
+    return SINE_PRECISION;
 }

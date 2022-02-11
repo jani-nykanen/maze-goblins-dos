@@ -2,6 +2,7 @@
 #include "system.h"
 #include "menu.h"
 #include "game.h"
+#include "mathext.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,6 +22,7 @@ typedef struct {
 
     Bitmap* bmpFont;
     Bitmap* bmpFontYellow;
+    Bitmap* bmpLogo;
 
     Menu* titleMenu;
 
@@ -28,6 +30,8 @@ typedef struct {
 
     bool backgroundDrawn;
     bool load;
+
+    i16 logoWave;
 
 } TitleScreen;
 
@@ -130,6 +134,27 @@ static void update_title_screen(Window* window, i16 step) {
 }
 
 
+static void draw_logo(Canvas* canvas) {
+
+    i16 i;
+    u16 bw, bh;
+    i16 x, y;
+    i16 shift;
+
+    bitmap_get_size(title->bmpLogo, &bw, &bh);
+
+    x = 160 - (i16) (bw/2);
+    y = 20;
+
+    for (i = 0; i < (i16) bh; ++ i) {
+
+        // TODO: Implement
+    }
+
+    canvas_draw_bitmap_fast(canvas, title->bmpLogo, 160-80, 20);
+}
+
+
 static void draw_title_screen(Canvas* canvas) {
 
     if (!title->backgroundDrawn) {
@@ -140,10 +165,12 @@ static void draw_title_screen(Canvas* canvas) {
 
     canvas_toggle_clipping(canvas, false);
 
+    draw_logo(canvas);
+
     menu_draw(title->titleMenu, canvas,
         title->bmpFont,
         title->bmpFontYellow,
-        0, 32, 0, 2);
+        0, 48, 0, 2);
 
     canvas_toggle_clipping(canvas, true);
 }   
@@ -160,11 +187,19 @@ i16 init_title_screen_scene(Window* window, AssetCache* assets) {
 
     title->assets = assets;
 
+    if ((title->bmpLogo = load_bitmap("LOGO.BIN")) == NULL) {
+
+        dispose_title_screen_scene();
+        return 1;
+    }
+
     title->bmpFont = asset_cache_get_bitmap(assets, "font_white");
     title->bmpFontYellow = asset_cache_get_bitmap(assets, "font_yellow");
 
     title->backgroundDrawn = false;
     title->load = false;
+
+    title->logoWave = 0;
 
     title->titleMenu = new_menu(BUTTON_NAMES, 4, menu_callback);
     if (title->titleMenu == NULL) {
@@ -182,6 +217,8 @@ void dispose_title_screen_scene() {
 
     if (title == NULL)
         return;
+
+    dispose_bitmap(title->bmpLogo);
 
     dispose_menu(title->titleMenu);
     m_free(title);

@@ -11,6 +11,7 @@ mkdir -p bin
 ./tools/bin/png2bin "$IN"static_tiles.png "$OUT"STATIC.BIN
 ./tools/bin/png2bin "$IN"dynamic_tiles.png "$OUT"DYNAMIC.BIN
 ./tools/bin/png2bin "$IN"borders.png "$OUT"BORDERS.BIN
+./tools/bin/png2bin "$IN"logo_flat.png "$OUT"LOGO.BIN -RLE
 
 ./tools/bin/mono2src "$IN"loading.png src/loading.h
 

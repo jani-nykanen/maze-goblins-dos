@@ -18,4 +18,10 @@ i16 round_i16(i16 x, i16 d);
 i16 neg_mod_i16(i16 n, i16 m);
 
 
+// Heh, fixed sin
+i16 fixed_sin(i16 angle);
+
+i16 get_fixed_trig_precision();
+
+
 #endif // PROJECTNAME_MATH_EXT_H
