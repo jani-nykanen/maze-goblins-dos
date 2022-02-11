@@ -3,6 +3,7 @@
 #include "menu.h"
 #include "game.h"
 #include "mathext.h"
+#include "keyb.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,6 +33,9 @@ typedef struct {
     bool load;
 
     i16 logoWave;
+
+    bool enterPressed;
+    i16 enterTimer;
 
 } TitleScreen;
 
@@ -132,7 +136,24 @@ static void update_title_screen(Window* window, i16 step) {
 
     const i16 WAVE_SPEED = 2;
 
-    menu_update(title->titleMenu, window);
+    if (title->enterPressed) {
+    
+        menu_update(title->titleMenu, window);
+    }
+    else {
+
+        title->enterTimer = (title->enterTimer += step) % 60;
+
+        if (keyboard_get_normal_key(KEY_RETURN) == STATE_PRESSED) {
+
+            title->enterPressed = true;
+            title->backgroundDrawn = false;
+
+            audio_play_predefined_sample(
+                window_get_audio_system(window), 
+                SAMPLE_START_BEEP);
+        }
+    }
 
     title->logoWave = (title->logoWave + WAVE_SPEED*step) % 360;
 }
@@ -140,7 +161,7 @@ static void update_title_screen(Window* window, i16 step) {
 
 static void draw_logo(Canvas* canvas) {
 
-    const i16 AMPLITUDE = 8;
+    const i16 AMPLITUDE = 6;
 
     i16 i;
     u16 bw, bh;
@@ -151,7 +172,7 @@ static void draw_logo(Canvas* canvas) {
 
     bitmap_get_size(title->bmpLogo, &bw, &bh);
 
-    waveStep = (bh << 6) / 18;
+    waveStep = (bh << 6) / 24;
 
     x = 160 - (i16) (bw/2);
     y = 20;
@@ -176,9 +197,17 @@ static void draw_logo(Canvas* canvas) {
 
 static void draw_title_screen(Canvas* canvas) {
 
+    const u8* ENTER_TEXT = "PRESS ENTER TO START";
+
+    i16 len = (i16) strlen(ENTER_TEXT);
+
     if (!title->backgroundDrawn) {
 
         canvas_clear(canvas, 0);
+
+        canvas_draw_text_fast(canvas, title->bmpFontYellow,
+            "(c)2022 Jani Nyk@nen", 160, 200-10, 0, 0, ALIGN_CENTER);
+
         title->backgroundDrawn = true;
     }
 
@@ -186,10 +215,25 @@ static void draw_title_screen(Canvas* canvas) {
 
     draw_logo(canvas);
 
-    menu_draw(title->titleMenu, canvas,
+    if (title->enterPressed) {
+
+        menu_draw(title->titleMenu, canvas,
         title->bmpFont,
         title->bmpFontYellow,
         0, 48, 0, 2);
+    }
+    else {
+
+        if (title->enterTimer < 30) {
+
+            canvas_draw_text_fast(canvas, title->bmpFont,
+                ENTER_TEXT, 160, 144, 0, 0, ALIGN_CENTER);
+        }
+        else {
+
+            canvas_fill_rect(canvas, 160 - len*4, 144, len*8, 8, 0);
+        }
+    }
 
     canvas_toggle_clipping(canvas, true);
 }   
@@ -219,6 +263,9 @@ i16 init_title_screen_scene(Window* window, AssetCache* assets) {
     title->load = false;
 
     title->logoWave = 0;
+
+    title->enterPressed = false;
+    title->enterTimer = 59;
 
     title->titleMenu = new_menu(BUTTON_NAMES, 4, menu_callback);
     if (title->titleMenu == NULL) {
