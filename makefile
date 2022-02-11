@@ -1,4 +1,4 @@
-tools: png2bin tmx2bin
+tools: png2bin mono2src tmx2bin
 
 png2bin:
 	mkdir -p ./tools/bin
@@ -11,7 +11,6 @@ mono2src:
 tmx2bin:
 	mkdir -p ./tools/bin
 	gcc -o ./tools/bin/$@ ./tools/$@.c -lm 
-
 
 run:
 	dosbox bin/game.exe

@@ -130,28 +130,47 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
 
 static void update_title_screen(Window* window, i16 step) {
 
+    const i16 WAVE_SPEED = 2;
+
     menu_update(title->titleMenu, window);
+
+    title->logoWave = (title->logoWave + WAVE_SPEED*step) % 360;
 }
 
 
 static void draw_logo(Canvas* canvas) {
 
+    const i16 AMPLITUDE = 8;
+
     i16 i;
     u16 bw, bh;
     i16 x, y;
     i16 shift;
+    i16 waveStep;
+    i16 wave;
 
     bitmap_get_size(title->bmpLogo, &bw, &bh);
+
+    waveStep = (bh << 6) / 18;
 
     x = 160 - (i16) (bw/2);
     y = 20;
 
     for (i = 0; i < (i16) bh; ++ i) {
 
-        // TODO: Implement
+        wave = waveStep*i;
+        wave >>= 6;
+        wave += title->logoWave;
+
+        shift = fixed_sin(wave) * AMPLITUDE;
+        shift >>= get_fixed_trig_precision();
+
+        canvas_draw_bitmap_region_fast(canvas, title->bmpLogo,
+            0, i, bw, 1,
+            160-80 + shift, 20 + i);
     }
 
-    canvas_draw_bitmap_fast(canvas, title->bmpLogo, 160-80, 20);
+    // canvas_draw_bitmap_fast(canvas, title->bmpLogo, 160-80, 20);
 }
 
 
