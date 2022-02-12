@@ -19,6 +19,19 @@ static const u8* BUTTON_NAMES[] = {
 };
 
 
+static const i16 STAR_X[] = {
+    8, 32, 24, 64, 16, 48, 80, 32,
+    248, 304, 224, 296, 270, 288, 224, 264
+};
+
+static const i16 STAR_Y[] = {
+
+    16, 96, 128, 48, 64, 176, 160, 32,
+    16, 96, 128, 48, 64, 176, 160, 184
+};
+static const i16 STAR_COUNT = 16;
+
+
 typedef struct {
 
     Bitmap* bmpFont;
@@ -172,6 +185,9 @@ static void draw_logo(Canvas* canvas) {
 
     bitmap_get_size(title->bmpLogo, &bw, &bh);
 
+    // Final 8 rows are stars
+    bh -= 8;
+
     waveStep = (bh << 6) / 24;
 
     x = 160 - (i16) (bw/2);
@@ -195,6 +211,22 @@ static void draw_logo(Canvas* canvas) {
 }
 
 
+static void draw_stars(Canvas* canvas) {
+
+    i16 i;
+    i16 sx;
+
+    for (i = 0; i < STAR_COUNT; ++ i) {
+
+        sx = (i % 6) * 8;
+
+        canvas_draw_bitmap_region_fast(canvas, title->bmpLogo,
+            sx, 80, 8, 8, 
+            STAR_X[i], STAR_Y[i]);
+    }
+}
+
+
 static void draw_title_screen(Canvas* canvas) {
 
     const u8* ENTER_TEXT = "PRESS ENTER TO START";
@@ -204,6 +236,7 @@ static void draw_title_screen(Canvas* canvas) {
     if (!title->backgroundDrawn) {
 
         canvas_clear(canvas, 0);
+        draw_stars(canvas);
 
         canvas_draw_text_fast(canvas, title->bmpFontYellow,
             "(c)2022 Jani Nyk@nen", 160, 200-10, 0, 0, ALIGN_CENTER);
