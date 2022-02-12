@@ -53,11 +53,12 @@ static const char* STORY_ENDING[] = {
 "Congratulations, you have\n"
 "collected enough power stars to\n"
 "return home. Too bad you had to\n"
-"dozens of innocent space monsters\n"
-"for that."
+"kill dozens of innocent space\n"
+"monsters."
 ,
-"I hope you are proud of yourself\n"
-"now."
+"Could it have been avoided? Who\n"
+"knows, I just hope that you are\n"
+"proud of yourself."
 };
 
 
@@ -113,7 +114,8 @@ static void update_story(Window* window, i16 step) {
             }
             else {
 
-                window_start_transition(window, true, 2, go_to_game_callback);
+                window_start_transition(window, true, 2, 
+                    TRANSITION_DARKEN, go_to_game_callback);
                 return;
             }
         }
@@ -203,7 +205,7 @@ i16 init_story_scene(Window* window, AssetCache* assets, bool isEnding) {
 
     story->assets = assets;
 
-    window_draw_loading_screen(window);
+    window_draw_loading_screen(window, isEnding ? 255 : 0);
 
     if ((story->bmpBanner = load_bitmap(isEnding ? "INTRO2.BIN" : "INTRO1.BIN")) == NULL) {
 

@@ -6,6 +6,15 @@
 #include "audio.h"
 
 
+typedef enum {
+
+    TRANSITION_NONE = 0,
+    TRANSITION_DARKEN = 1,
+    TRANSITION_LIGHTEN = 2
+
+} TransitionType;
+
+
 // A virtual window, to make SDL2 etc. ports
 // possible
 EMPTY_STRUCT(Window);
@@ -26,14 +35,15 @@ void window_register_callback_functions(Window* window,
 void window_make_active(Window* window);
 
 void window_start_transition(Window* window,
-    bool fadeOut, i16 speed, TransitionCallback cb);
+    bool fadeOut, i16 speed, TransitionType type,
+    TransitionCallback cb);
 
 AudioSystem* window_get_audio_system(Window* window);
 
 void window_terminate(Window* window);
 
 void window_bind_loading_bitmap(Window* window, Bitmap* bmp);
-void window_draw_loading_screen(Window* window);
+void window_draw_loading_screen(Window* window, u8 clearColor);
 
 
 #endif // PROJECTNAME_WINDOW_H

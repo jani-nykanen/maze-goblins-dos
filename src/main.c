@@ -87,7 +87,7 @@ i16 main() {
     }
     window_bind_loading_bitmap(window, loadingBitmap);
 
-    window_draw_loading_screen(window);
+    window_draw_loading_screen(window, 0);
     if (load_global_assets(assets) == 1) {
 
         dispose_window(window);

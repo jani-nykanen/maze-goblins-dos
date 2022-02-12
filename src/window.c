@@ -2,6 +2,7 @@
 #include "system.h"
 #include "keyb.h"
 #include "palette.h"
+#include "mathext.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -31,6 +32,7 @@ typedef struct {
 
     i16 transitionTimer;
     i16 transitionSpeed;
+    TransitionType transitionType;
     bool fadingOut;
     TransitionCallback transitionCb;
 
@@ -96,11 +98,19 @@ static void update_transition(_Window* window, i16 step) {
         }
     }
 
-    hue = (HUE_COUNT*2-1) * window->transitionTimer;
+    if (window->transitionType == TRANSITION_NONE)
+        return; 
+
+    hue = ((HUE_COUNT-1)*2) * window->transitionTimer;
     hue /= TRANSITION_TIME;
 
     if (window->fadingOut)
-        hue = (HUE_COUNT*2-1) - hue;
+        hue = ((HUE_COUNT-1)*2) - hue;
+
+    hue = clamp_i16(hue, 0, (HUE_COUNT-1)*2);
+
+    if (window->transitionType == TRANSITION_LIGHTEN)
+        hue *= -1; 
 
     canvas_set_global_hue(window->framebuffer, hue);
 }
@@ -175,6 +185,7 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
     w->transitionTimer = 0;
     w->fadingOut = false;
     w->transitionSpeed = 1;
+    w->transitionType = TRANSITION_NONE;
 
     w->running = false;
 
@@ -224,7 +235,8 @@ void window_make_active(Window* _window) {
 
 
 void window_start_transition(Window* _window,
-    bool fadeOut, i16 speed, TransitionCallback cb) {
+    bool fadeOut, i16 speed, TransitionType type,
+    TransitionCallback cb) {
 
     _Window* window = (_Window*) _window;
 
@@ -232,6 +244,7 @@ void window_start_transition(Window* _window,
     window->fadingOut = fadeOut;
     window->transitionTimer = TRANSITION_TIME;
     window->transitionCb = cb;
+    window->transitionType = type;
 }
 
 
@@ -257,7 +270,7 @@ void window_bind_loading_bitmap(Window* _window, Bitmap* bmp) {
 }
 
 
-void window_draw_loading_screen(Window* _window) {
+void window_draw_loading_screen(Window* _window, u8 clearColor) {
 
     _Window* window = (_Window*) _window;
 
@@ -269,7 +282,7 @@ void window_draw_loading_screen(Window* _window) {
     bitmap_get_size(window->loadingBitmap, &bw, &bh);
     canvas_get_size(window->framebuffer, &w, &h);
 
-    canvas_clear(window->framebuffer, 0);
+    canvas_clear(window->framebuffer, clearColor);
     canvas_draw_bitmap_fast(window->framebuffer, 
         window->loadingBitmap,
         w/2 - bw/2, h/2 - bh/2);

@@ -6,6 +6,9 @@
 #include <graph.h>
 
 
+typedef u8 Table [HUE_COUNT] [256];
+
+
 static u8 HUE_DARK [HUE_COUNT] [256];
 static u8 HUE_LIGHT [HUE_COUNT] [256];
 
@@ -77,6 +80,13 @@ static void compute_hue_palettes() {
                 -- b;
         }
 
+        // And lets recalculate...
+        r = c >> 5;
+        g = c << 3;
+        g >>= 5;
+        b = c << 6;
+        b >>= 6;
+
         // Light
         for (j = 0; j < HUE_COUNT; ++ j) {
 
@@ -131,24 +141,29 @@ void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 h
 
     // Should be faster than palette swapping, which, at least
     // in my experience, is slow
+    // (well, this is not very fast either...)
 
     u16 i, j, k;
     u8 dither;
     u8* out = (u8*) target;
+    Table* table = &HUE_DARK;
 
     u16 rows;
 
-    if (hue <= 0)
-        hue = 0;
-    else if (hue >= HUE_COUNT*2-1)
-        hue = HUE_COUNT*2-1;
+    if (hue < 0) {
+
+        hue *= -1;
+        table = &HUE_LIGHT;
+    }
+    else if (hue >= (HUE_COUNT-1)*2)
+        hue = (HUE_COUNT-1)*2;
 
     if (hue % 2 == 0) {
 
         hue /= 2;
         for (i = 0; i < len; ++ i) {
 
-            out[i] = HUE_DARK[hue][(u16) data[i]];
+            out[i] = (*table)[hue][(u16) data[i]];
         }
     }
     else {
@@ -163,7 +178,7 @@ void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 h
 
             for (i = 0; i < offset; ++ i) {
 
-                out[k] = HUE_DARK[hue + dither][(u16) data[k]];
+                out[k] = (*table)[hue + dither][(u16) data[k]];
                 dither = !dither;
 
                 ++ k;

@@ -131,7 +131,7 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
     // New game
     case 0:
 
-        window_start_transition(window, true, 2, start_game_callback);
+        window_start_transition(window, true, 2, TRANSITION_DARKEN, start_game_callback);
         break;
 
     // Toggle audio
@@ -150,7 +150,7 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
     // Quit
     case 3:
 
-        window_start_transition(window, true, 2, terminate_callback);
+        window_start_transition(window, true, 2, TRANSITION_DARKEN, terminate_callback);
         break;
 
     default:
@@ -296,6 +296,8 @@ i16 init_title_screen_scene(Window* window, AssetCache* assets) {
     }
 
     title->assets = assets;
+
+    window_draw_loading_screen(window, 0);
 
     if ((title->bmpLogo = load_bitmap("LOGO.BIN")) == NULL) {
 

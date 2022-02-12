@@ -132,7 +132,7 @@ static void yes_no_callback(Menu* menu, i16 button, Window* window) {
                 window_terminate(window);
                 return;
             }
-            window_start_transition(window, true, 2, go_to_title);
+            window_start_transition(window, true, 2, TRANSITION_DARKEN, go_to_title);
         }
     }
     // No
@@ -148,7 +148,7 @@ static void yes_no_callback(Menu* menu, i16 button, Window* window) {
         }
         else {
 
-            window_start_transition(window, true, 2, go_to_title);
+            window_start_transition(window, true, 2, TRANSITION_DARKEN, go_to_title);
             return;
         }
     }
@@ -206,9 +206,15 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
 }
 
 
+static bool is_final_stage() {
+
+    return game->stageIndex == tilemap_pack_get_tilemap_count(game->baseLevels)-1;
+}
+
+
 static void next_level(Window* window) {
 
-    if (game->stageIndex == tilemap_pack_get_tilemap_count(game->baseLevels)-1) {
+    if (is_final_stage()) {
 
         if (init_story_scene(window, game->assets, 1) != 0) {
 
@@ -245,7 +251,9 @@ static void update_game(Window* window, i16 step) {
 
             if (game->victory) {
                 
-                window_start_transition(window, true, 2, next_level);
+                window_start_transition(window, true, 2, 
+                    is_final_stage() ? TRANSITION_LIGHTEN : TRANSITION_DARKEN,
+                    next_level);
             }
             else {
 
@@ -520,7 +528,7 @@ i16 init_game_scene(Window* window, AssetCache* assets, u16 startIndex) {
 
     game->assets = assets;
 
-    window_draw_loading_screen(window);
+    window_draw_loading_screen(window, 0);
 
     if ((game->bmpStaticTiles = load_bitmap("STATIC.BIN")) == NULL ||
         (game->bmpDynamicTiles = load_bitmap("DYNAMIC.BIN")) == NULL ||
