@@ -6,3 +6,4 @@ project.*
 !*.h
 tools/bin
 bin
+*.zip

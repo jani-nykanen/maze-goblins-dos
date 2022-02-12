@@ -25,6 +25,7 @@ typedef struct {
 
     bool drawNextCharacter;
     bool bannerDrawn;
+    bool drawWholeMessage;
 
 } StoryScene;
 
@@ -104,7 +105,16 @@ static void update_story(Window* window, i16 step) {
     }
     else {
 
-        if ((story->charTimer += step) >= CHAR_TIME) {
+        if (keyboard_any_pressed()) {
+
+            story->drawWholeMessage = true;
+            story->drawNextCharacter = false;
+
+            story->charIndex = story->msgLength;
+
+            audio_play_predefined_sample(window_get_audio_system(window), SAMPLE_CHOOSE);
+        }
+        else if ((story->charTimer += step) >= CHAR_TIME) {
 
             story->charTimer -= CHAR_TIME;
             ++ story->charIndex;
@@ -141,8 +151,15 @@ static void draw_story(Canvas* canvas) {
 
         story->bannerDrawn = true;
     }
+ 
+    if (story->drawWholeMessage) {
 
-    if (story->drawNextCharacter) {
+        canvas_draw_text_fast(canvas, story->bmpFont,
+            story->activeMessage, 16, STORY_Y, 0, 2, ALIGN_LEFT);
+
+        story->drawWholeMessage = false;
+    }
+    else if (story->drawNextCharacter) {
 
         canvas_draw_substr_fast(canvas, story->bmpFont,
             story->activeMessage, story->charIndex, story->charIndex+1,
@@ -185,6 +202,7 @@ i16 init_story_scene(Window* window, AssetCache* assets, bool isEnding) {
 
     story->drawNextCharacter = true;
     story->bannerDrawn = false;
+    story->drawWholeMessage = false;
 
     return 0;
 }
