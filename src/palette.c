@@ -60,6 +60,7 @@ static void compute_hue_palettes() {
         b = c << 6;
         b >>= 6;
 
+        // Dark
         for (j = 0; j < HUE_COUNT; ++ j) {
 
             mr = r << 5;
@@ -74,6 +75,23 @@ static void compute_hue_palettes() {
             if (g > 0) -- g;
             if (b > 0 && j % 2 != 0)
                 -- b;
+        }
+
+        // Light
+        for (j = 0; j < HUE_COUNT; ++ j) {
+
+            mr = r << 5;
+            mg = g << 2;
+            mb = b;
+
+            HUE_LIGHT[j][i] = mr | mg | mb;
+
+            if (j == HUE_COUNT-1) break;
+
+            if (r < 7) ++ r;
+            if (g < 7) ++ g;
+            if (b < 3 && j % 2 != 0)
+                ++ b;
         }
     }
 
@@ -109,21 +127,48 @@ u8 lighten_color(u8 color, i16 amount) {
 }
 
 
-void copy_hued_data_to_location(u8* data, u32 target, u32 len, i16 hue) {
+void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 hue) {
 
     // Should be faster than palette swapping, which, at least
     // in my experience, is slow
 
-    u32 i;
+    u16 i, j, k;
+    u8 dither;
     u8* out = (u8*) target;
+
+    u16 rows;
 
     if (hue <= 0)
         hue = 0;
-    else if (hue >= HUE_COUNT)
-        hue = HUE_COUNT-1;
+    else if (hue >= HUE_COUNT*2-1)
+        hue = HUE_COUNT*2-1;
 
-    for (i = 0; i < len; ++ i) {
+    if (hue % 2 == 0) {
 
-        out[i] = HUE_DARK[hue][(u16) data[i]];
+        hue /= 2;
+        for (i = 0; i < len; ++ i) {
+
+            out[i] = HUE_DARK[hue][(u16) data[i]];
+        }
+    }
+    else {
+
+        hue /= 2;
+
+        rows = len / offset;
+
+        k = 0;
+        dither = 0;
+        for (j = 0; j < rows; ++ j) {
+
+            for (i = 0; i < offset; ++ i) {
+
+                out[k] = HUE_DARK[hue + dither][(u16) data[k]];
+                dither = !dither;
+
+                ++ k;
+            }
+            dither = !dither;
+        }
     }
 }

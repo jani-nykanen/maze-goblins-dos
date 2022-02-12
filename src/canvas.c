@@ -229,7 +229,8 @@ void canvas_copy_to_memory_location(Canvas* _canvas, u32 loc) {
     else {
 
         copy_hued_data_to_location(canvas->pixels, loc, 
-             (u32) (canvas->width*canvas->height), canvas->hue);
+            canvas->width*canvas->height, 
+            canvas->width, canvas->hue);
     }
 }
 

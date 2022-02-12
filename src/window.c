@@ -96,11 +96,11 @@ static void update_transition(_Window* window, i16 step) {
         }
     }
 
-    hue = (HUE_COUNT-1) * window->transitionTimer;
+    hue = (HUE_COUNT*2-1) * window->transitionTimer;
     hue /= TRANSITION_TIME;
 
     if (window->fadingOut)
-        hue = (HUE_COUNT-1) - hue;
+        hue = (HUE_COUNT*2-1) - hue;
 
     canvas_set_global_hue(window->framebuffer, hue);
 }

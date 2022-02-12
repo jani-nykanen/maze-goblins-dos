@@ -5,6 +5,7 @@
 #include "keyb.h"
 #include "menu.h"
 #include "title.h"
+#include "story.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -206,6 +207,19 @@ static void menu_callback(Menu* menu, i16 button, Window* window) {
 
 
 static void next_level(Window* window) {
+
+    if (game->stageIndex == tilemap_pack_get_tilemap_count(game->baseLevels)-1) {
+
+        if (init_story_scene(window, game->assets, 1) != 0) {
+
+            window_terminate(window);
+            return;
+        }
+
+        dispose_game_scene();
+        register_story_scene(window);
+        return;
+    }
 
     game->backgroundDrawn = false;
 

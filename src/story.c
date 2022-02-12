@@ -2,6 +2,7 @@
 #include "system.h"
 #include "keyb.h"
 #include "game.h"
+#include "title.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@ typedef struct {
     i16 phase;
     i16 page;
     u16 msgLength;
-    u16 charIndex;
+    i16 charIndex;
     i16 charTimer;
 
     bool drawNextCharacter;
@@ -35,7 +36,7 @@ static StoryScene* story = NULL;
 static const char* STORY_BEGINNING[] = {
 
 "You are a space traveller from a\n"
-"far way planet. You are lost in\n"
+"far away planet. You are lost in\n"
 "a mysterious space maze filled\n"
 "with monsters. They seem harmless,\n"
 "but you decide to kill them\n"
@@ -55,21 +56,35 @@ static const char* STORY_ENDING[] = {
 "dozens of innocent space monsters\n"
 "for that."
 ,
-"I hope you are proud of\n"
-"yourself."
+"I hope you are proud of yourself\n"
+"now."
 };
 
 
 static void go_to_game_callback(Window* window) {
 
-    if (init_game_scene(window, story->assets, 0) == 1) {
+    if (story->phase == 0) {
 
-        window_terminate(window);
-        return;
+        if (init_game_scene(window, story->assets, 0) == 1) {
+
+            window_terminate(window);
+            return;
+        }
+
+        dispose_story_scene();
+        register_game_scene(window);
     }
+    else {
 
-    dispose_story_scene();
-    register_game_scene(window);
+        if (init_title_screen_scene(window, story->assets) == 1) {
+
+            window_terminate(window);
+            return;
+        }
+
+        dispose_story_scene();
+        register_title_screen_scene(window);
+    }
 }
 
 
@@ -83,11 +98,11 @@ static void update_story(Window* window, i16 step) {
 
             audio_play_predefined_sample(window_get_audio_system(window), SAMPLE_INTRO_BEEP);
 
-            ++ story->phase;
+            ++ story->page;
             
-            if (story->phase == 1) {
+            if (story->page == 1) {
 
-                story->activeMessage = story->messages[story->phase];
+                story->activeMessage = story->messages[story->page];
                 story->msgLength = (u16) strlen(story->activeMessage);
 
                 story->bannerDrawn = false;
@@ -139,13 +154,13 @@ static void draw_story(Canvas* canvas) {
     u16 w, h;
     u16 bw, bh;
 
+    canvas_get_size(canvas, &w, &h);
+
     if (!story->bannerDrawn) {
 
         canvas_clear(canvas, 0);
 
-        canvas_get_size(canvas, &w, &h);
         bitmap_get_size(story->bmpBanner, &bw, &bh);
-
         canvas_draw_bitmap_fast(canvas, story->bmpBanner,
             (i16)(w/2 - bw/2), 8);
 
@@ -166,6 +181,13 @@ static void draw_story(Canvas* canvas) {
             16, STORY_Y, 0, 2, ALIGN_LEFT);
 
         story->drawNextCharacter = false;
+    }
+
+    if (story->charIndex >= story->msgLength) {
+
+        canvas_draw_bitmap_region_fast(canvas, 
+            story->bmpFont, 8, 0, 8, 8,
+            w-16, h-16);
     }
 }
 
@@ -193,14 +215,14 @@ i16 init_story_scene(Window* window, AssetCache* assets, bool isEnding) {
 
     story->page = 0;
     story->phase = (i16) isEnding;
-    story->charIndex = 0;
+    story->charIndex = -1;
     story->charTimer = 0;
     
     story->messages = isEnding ? STORY_ENDING : STORY_BEGINNING;
     story->activeMessage = story->messages[0];
     story->msgLength = (u16) strlen(story->activeMessage);
 
-    story->drawNextCharacter = true;
+    story->drawNextCharacter = false;
     story->bannerDrawn = false;
     story->drawWholeMessage = false;
 

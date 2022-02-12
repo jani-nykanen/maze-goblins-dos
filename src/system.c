@@ -7,6 +7,8 @@
 #define BUFFER_MAX_SIZE 512
 
 
+// Why is this called "buffer", not "errorBuffer?"
+// Well, I'm not going to rename it now!
 static char* buffer = NULL;
 
 
