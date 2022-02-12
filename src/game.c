@@ -555,7 +555,7 @@ i16 init_game_scene(Window* window, AssetCache* assets, u16 startIndex) {
     game->bufferCloned = false;
     game->hintDrawn = false;
 
-    window_start_transition(window, false, 2, NULL);
+    // window_start_transition(window, false, 2, NULL);
 
     return 0;
 }
