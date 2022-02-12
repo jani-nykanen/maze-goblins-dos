@@ -18,3 +18,11 @@ run:
 .PHONY: assets
 assets:
 	./assets/convert.sh
+
+
+dist:
+	mkdir -p temp
+	cp ./bin/*.BIN temp
+	cp ./bin/game.exe temp/TMODOSG.EXE
+	(cd temp; zip -r ../dist.zip .)
+	rm -rf temp

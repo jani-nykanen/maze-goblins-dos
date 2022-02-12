@@ -4,6 +4,7 @@
 #include "game.h"
 #include "mathext.h"
 #include "keyb.h"
+#include "story.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -83,16 +84,29 @@ static void start_game_callback(Window* window) {
 
             startIndex = (u16) index;
         }
+
+        // TODO: If startIndex < 0, go to the story screen
+
+        if (init_game_scene(window, title->assets, startIndex) != 0) {
+
+            window_terminate(window);
+            return;
+        }
+
+        dispose_title_screen_scene();
+        register_game_scene(window);
     }
+    else {
 
-    if (init_game_scene(window, title->assets, startIndex) != 0) {
+        if (init_story_scene(window, title->assets, 0) != 0) {
 
-        window_terminate(window);
-        return;
+            window_terminate(window);
+            return;
+        }
+
+        dispose_title_screen_scene();
+        register_story_scene(window);
     }
-
-    dispose_title_screen_scene();
-    register_game_scene(window);
 }
 
 

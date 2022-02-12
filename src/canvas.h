@@ -45,6 +45,11 @@ void canvas_draw_text(Canvas* canvas, Bitmap* bmp,
     str text, i16 x, i16 y, 
     i16 xoff, i16 yoff, TextAlign align);   
 
+void canvas_draw_substr_fast(Canvas* canvas, Bitmap* bmp,
+    str text, u16 start, u16 end,
+    i16 x, i16 y, i16 xoff, i16 yoff, 
+    TextAlign align);
+
 void canvas_reset_clip_area(Canvas* canvas);
 void canvas_set_clip_area(Canvas* canvas, i16 x, i16 y, i16 w, i16 h);
 

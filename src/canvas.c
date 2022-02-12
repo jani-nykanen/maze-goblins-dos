@@ -363,6 +363,21 @@ void canvas_draw_text(Canvas* canvas, Bitmap* _bmp,
 }
 
 
+void canvas_draw_substr_fast(Canvas* canvas, Bitmap* _bmp,
+    str text, u16 start, u16 end,
+    i16 x, i16 y, i16 xoff, i16 yoff, 
+    TextAlign align) {
+
+    TEXT_FUNCTION(
+        if (i-1 >= start && i <= end) {
+            
+            canvas_draw_bitmap_region_fast(canvas, _bmp, 
+                sx*charw, sy*charh, charw, charh, dx, dy);
+        }
+    );
+}
+
+
 void canvas_reset_clip_area(Canvas* canvas) {
 
     canvas_set_clip_area(canvas, 0, 0, 320, 200);
