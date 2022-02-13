@@ -228,9 +228,12 @@ void canvas_copy_to_memory_location(Canvas* _canvas, u32 loc) {
     }
     else {
 
-        copy_hued_data_to_location(canvas->pixels, loc, 
+        copy_hued_data_to_location(
+            canvas->pixels, 
+            canvas->pixelBuffer, 
             canvas->width*canvas->height, 
             canvas->width, canvas->hue);
+        memcpy((void*)(size_t)loc, canvas->pixelBuffer, canvas->width*canvas->height);
     }
 }
 

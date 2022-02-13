@@ -114,7 +114,7 @@ static void update_story(Window* window, i16 step) {
             }
             else {
 
-                window_start_transition(window, true, 2, 
+                window_start_transition(window, true, 3, 
                     TRANSITION_DARKEN, go_to_game_callback);
                 return;
             }

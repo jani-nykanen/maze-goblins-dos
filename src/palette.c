@@ -137,7 +137,7 @@ u8 lighten_color(u8 color, i16 amount) {
 }
 
 
-void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 hue) {
+void copy_hued_data_to_location(u8* data, u8* target, u16 len, u16 offset, i16 hue) {
 
     // Should be faster than palette swapping, which, at least
     // in my experience, is slow
@@ -145,7 +145,6 @@ void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 h
 
     u16 i, j, k;
     u8 dither;
-    u8* out = (u8*) target;
     Table* table = &HUE_DARK;
 
     u16 rows;
@@ -163,7 +162,7 @@ void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 h
         hue /= 2;
         for (i = 0; i < len; ++ i) {
 
-            out[i] = (*table)[hue][(u16) data[i]];
+            target[i] = (*table)[hue][(u16) data[i]];
         }
     }
     else {
@@ -178,7 +177,7 @@ void copy_hued_data_to_location(u8* data, u32 target, u16 len, u16 offset, i16 h
 
             for (i = 0; i < offset; ++ i) {
 
-                out[k] = (*table)[hue + dither][(u16) data[k]];
+                target[k] = (*table)[hue + dither][(u16) data[k]];
                 dither = !dither;
 
                 ++ k;

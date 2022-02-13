@@ -30,6 +30,9 @@ typedef struct {
     UpdateCallback update;
     RedrawCallback redraw;
 
+    bool redrawFrame;
+    i16 oldHue;
+
     i16 transitionTimer;
     i16 transitionSpeed;
     TransitionType transitionType;
@@ -113,6 +116,12 @@ static void update_transition(_Window* window, i16 step) {
         hue *= -1; 
 
     canvas_set_global_hue(window->framebuffer, hue);
+
+    if (hue == window->oldHue) {
+
+        window->redrawFrame = false;
+    }
+    window->oldHue = hue;
 }
 
 
@@ -121,6 +130,7 @@ static void loop(_Window* window) {
     if ( (window->frameCounter ++) == window->frameSkip) {
 
         window->frameCounter = 0;
+        window->redrawFrame = true;
     
         if (window->update != NULL && window->transitionTimer <= 0) {
 
@@ -139,7 +149,9 @@ static void loop(_Window* window) {
         }
 
         vblank();  
-        copy_canvas_to_screen(window);
+
+        if (window->redrawFrame)
+            copy_canvas_to_screen(window);
     }
     else {
 
@@ -186,6 +198,9 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
     w->fadingOut = false;
     w->transitionSpeed = 1;
     w->transitionType = TRANSITION_NONE;
+
+    w->oldHue = 0;
+    w->redrawFrame = true;
 
     w->running = false;
 
@@ -277,6 +292,8 @@ void window_draw_loading_screen(Window* _window, u8 clearColor) {
     u16 w, h;
     u16 bw, bh;
 
+    vblank();  
+
     canvas_set_global_hue(window->framebuffer, 0);
 
     bitmap_get_size(window->loadingBitmap, &bw, &bh);
@@ -286,7 +303,5 @@ void window_draw_loading_screen(Window* _window, u8 clearColor) {
     canvas_draw_bitmap_fast(window->framebuffer, 
         window->loadingBitmap,
         w/2 - bw/2, h/2 - bh/2);
-
-    // vblank();  
     copy_canvas_to_screen(window);
 }   

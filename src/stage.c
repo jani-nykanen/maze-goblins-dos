@@ -108,6 +108,8 @@ typedef struct {
     Tilemap* baseMap;
 
     u16 starCount;
+    
+    bool isFinal;
 
 } _Stage;
 
@@ -231,7 +233,9 @@ static void draw_static_layer(_Stage* stage, Canvas* canvas, Bitmap* staticTiles
             // Star
             case 8:
 
-                canvas_draw_bitmap_region_fast(canvas, staticTiles, 48, 0, 24, 20, dx, dy);
+                canvas_draw_bitmap_region_fast(canvas, staticTiles, 
+                    48, (i16)(stage->isFinal) * 20, 
+                    24, 20, dx, dy);
                 break;
 
             // Walls, off
@@ -1044,6 +1048,8 @@ Stage* new_stage(u16 maxWidth, u16 maxHeight) {
     stage->redrawn = true;
     stage->starCount = 0;
 
+    stage->isFinal = false;
+
     return (Stage*) stage;
 }
 
@@ -1076,7 +1082,7 @@ void dispose_stage(Stage* _stage) {
 }
 
 
-void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
+void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting, bool isFinal) {
 
     const u8 BOTTOM_FILTER[] = {2, 3, 4, 5, 6, 7};
     const u8 TOP_FILTER[] = {1, 8, 9, 10, 11};
@@ -1124,6 +1130,8 @@ void stage_init_tilemap(Stage* _stage, Tilemap* tilemap, bool resetting) {
 
         stage->dust[i].exist = false;
     }
+
+    stage->isFinal = isFinal;
 }
 
 
@@ -1209,7 +1217,7 @@ bool stage_reset(Stage* _stage, bool force) {
 
     stage->animationTimer = 0;
 
-    stage_init_tilemap(_stage, stage->baseMap, true);
+    stage_init_tilemap(_stage, stage->baseMap, true, stage->isFinal);
     memset(stage->redrawBuffer, 1, stage->width*stage->height);
 
     stage->starCount = compute_stars(stage);

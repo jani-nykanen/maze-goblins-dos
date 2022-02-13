@@ -132,7 +132,7 @@ static void yes_no_callback(Menu* menu, i16 button, Window* window) {
                 window_terminate(window);
                 return;
             }
-            window_start_transition(window, true, 2, TRANSITION_DARKEN, go_to_title);
+            window_start_transition(window, true, 3, TRANSITION_DARKEN, go_to_title);
         }
     }
     // No
@@ -148,7 +148,7 @@ static void yes_no_callback(Menu* menu, i16 button, Window* window) {
         }
         else {
 
-            window_start_transition(window, true, 2, TRANSITION_DARKEN, go_to_title);
+            window_start_transition(window, true, 3, TRANSITION_DARKEN, go_to_title);
             return;
         }
     }
@@ -232,7 +232,7 @@ static void next_level(Window* window) {
     ++ game->stageIndex;
     stage_init_tilemap(game->stage, 
         tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
-        false);
+        false, is_final_stage());
 
     game->victory = false;
     game->waitTimer = WAIT_TIME;
@@ -251,7 +251,7 @@ static void update_game(Window* window, i16 step) {
 
             if (game->victory) {
                 
-                window_start_transition(window, true, 2, 
+                window_start_transition(window, true, 3, 
                     is_final_stage() ? TRANSITION_LIGHTEN : TRANSITION_DARKEN,
                     next_level);
             }
@@ -553,7 +553,7 @@ i16 init_game_scene(Window* window, AssetCache* assets, u16 startIndex) {
     game->stageIndex = (u16) startIndex;
     stage_init_tilemap(game->stage, 
         tilemap_pack_get_tilemap(game->baseLevels, game->stageIndex),
-        false);
+        false, is_final_stage());
 
     game->pauseMenu = new_menu(BUTTON_NAMES, 4, menu_callback);
     if (game->pauseMenu == NULL) {

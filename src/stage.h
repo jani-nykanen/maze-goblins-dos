@@ -17,7 +17,7 @@ void init_stage();
 Stage* new_stage(u16 maxWidth, u16 maxHeight);
 void dispose_stage(Stage* stage);
 
-void stage_init_tilemap(Stage* stage, Tilemap* tilemap, bool resetting);
+void stage_init_tilemap(Stage* stage, Tilemap* tilemap, bool resetting, bool isFinal);
 
 bool stage_update(Stage* stage, AudioSystem* audio, i16 step);
 void stage_draw(Stage* stage, Canvas* canvas, 
