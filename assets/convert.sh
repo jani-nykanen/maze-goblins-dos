@@ -15,6 +15,7 @@ mkdir -p bin
 ./tools/bin/png2bin "$IN"intro1.png "$OUT"INTRO1.BIN -RLE
 ./tools/bin/png2bin "$IN"intro2.png "$OUT"INTRO2.BIN -RLE
 ./tools/bin/png2bin "$IN"ending.png "$OUT"ENDING.BIN -RLE
+./tools/bin/png2bin "$IN"start.png "$OUT"START.BIN -RLE
 
 ./tools/bin/mono2src "$IN"loading.png src/loading.h
 
