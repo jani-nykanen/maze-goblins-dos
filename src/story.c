@@ -15,6 +15,7 @@ typedef struct {
 
     Bitmap* bmpFont;
     Bitmap* bmpBanner;
+    Bitmap* bmpTheEnd;
 
     const char** messages;
     const char* activeMessage;
@@ -27,6 +28,8 @@ typedef struct {
     bool drawNextCharacter;
     bool bannerDrawn;
     bool drawWholeMessage;
+
+    bool theEndDrawn;
 
 } StoryScene;
 
@@ -62,8 +65,9 @@ static const char* STORY_ENDING[] = {
 };
 
 
-static void go_to_game_callback(Window* window) {
+static void change_scene_callback(Window* window) {
 
+    // TODO: "switch" instead of "if" tree...
     if (story->phase == 0) {
 
         if (init_game_scene(window, story->assets, 0) == 1) {
@@ -74,6 +78,11 @@ static void go_to_game_callback(Window* window) {
 
         dispose_story_scene();
         register_game_scene(window);
+    }
+    else if (story->phase == 1) {
+
+        story->phase = 2;
+        story->theEndDrawn = false;
     }
     else {
 
@@ -92,6 +101,18 @@ static void go_to_game_callback(Window* window) {
 static void update_story(Window* window, i16 step) {
 
     const i16 CHAR_TIME = 4;
+
+    if (story->phase == 2) {
+
+        if (keyboard_any_pressed()) {
+
+            audio_play_predefined_sample(window_get_audio_system(window), SAMPLE_INTRO_BEEP);
+
+            window_start_transition(window, true, 3, 
+                TRANSITION_DARKEN, change_scene_callback);
+        }
+        return;
+    }
 
     if (story->charIndex >= story->msgLength) {
 
@@ -115,7 +136,7 @@ static void update_story(Window* window, i16 step) {
             else {
 
                 window_start_transition(window, true, 3, 
-                    TRANSITION_DARKEN, go_to_game_callback);
+                    TRANSITION_DARKEN, change_scene_callback);
                 return;
             }
         }
@@ -157,6 +178,20 @@ static void draw_story(Canvas* canvas) {
     u16 bw, bh;
 
     canvas_get_size(canvas, &w, &h);
+
+    if (story->phase == 2) {
+
+        if (!story->theEndDrawn) {
+
+            canvas_clear(canvas, 0);
+
+            bitmap_get_size(story->bmpTheEnd, &bw, &bh);
+            canvas_draw_bitmap_fast(canvas, story->bmpTheEnd,
+                (i16)(w/2 - bw/2), (i16)(h/2 - bh/2));
+        }
+
+        return;
+    }
 
     if (!story->bannerDrawn) {
 
@@ -207,7 +242,8 @@ i16 init_story_scene(Window* window, AssetCache* assets, bool isEnding) {
 
     window_draw_loading_screen(window, isEnding ? 255 : 0);
 
-    if ((story->bmpBanner = load_bitmap(isEnding ? "INTRO2.BIN" : "INTRO1.BIN")) == NULL) {
+    if ((story->bmpBanner = load_bitmap(isEnding ? "INTRO2.BIN" : "INTRO1.BIN")) == NULL ||
+        (isEnding && (story->bmpTheEnd = load_bitmap("ENDING.BIN")) == NULL)) {
 
         dispose_story_scene();
         return 1;
@@ -227,6 +263,7 @@ i16 init_story_scene(Window* window, AssetCache* assets, bool isEnding) {
     story->drawNextCharacter = false;
     story->bannerDrawn = false;
     story->drawWholeMessage = false;
+    story->theEndDrawn = false;
 
     return 0;
 }
@@ -238,6 +275,7 @@ void dispose_story_scene() {
         return;
 
     dispose_bitmap(story->bmpBanner);
+    dispose_bitmap(story->bmpTheEnd);
     m_free(story);
 }
 
