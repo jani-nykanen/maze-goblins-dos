@@ -167,6 +167,8 @@ void menu_draw(Menu* _menu, Canvas* canvas,
     i16 bw, bh;
     i16 dx, dy;
 
+    bool redrawButtons = menu->cursorPos != menu->oldCursorPos;
+
     if (!menu->active) return;
 
     canvas_get_size(canvas, &w, &h);
@@ -191,9 +193,7 @@ void menu_draw(Menu* _menu, Canvas* canvas,
 
         bmp = i == menu->cursorPos ? bmpFontYellow : bmpFont;
 
-        if (!menu->drawn || 
-            (i == menu->cursorPos && menu->cursorPos != menu->oldCursorPos) ||
-            (i == menu->oldCursorPos && menu->cursorPos != menu->oldCursorPos)) {
+        if (menu->drawn || redrawButtons) {
 
             canvas_draw_text(canvas, bmp, menu->buttons[i], 
                 dx, dy + i * (8 + yoff), xoff, yoff, ALIGN_LEFT);

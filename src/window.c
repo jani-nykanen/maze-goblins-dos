@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include <dos.h>
 #include <conio.h>
@@ -40,6 +41,9 @@ typedef struct {
     TransitionCallback transitionCb;
 
     Bitmap* loadingBitmap;
+
+    i32 timeSum;
+    i32 oldTime;
 
 } _Window;
 
@@ -127,35 +131,69 @@ static void update_transition(_Window* window, i16 step) {
 
 static void loop(_Window* window) {
 
-    if ( (window->frameCounter ++) == window->frameSkip) {
+    const i32 FRAME_TIME = 17;
+    const i16 MAX_UPDATE_COUNT = 5;
+
+    i32 newTime = (i32) clock();
+    i32 delta;
+    i16 updateCount = 0;
+
+    i32 frameTime = FRAME_TIME * (window->frameSkip+1);
+    i16 step = 0;
+
+    bool refresh = false;
+    
+    if (newTime < window->oldTime) {
+
+        delta = 0;
+    }
+    else {
+
+        delta = newTime - window->oldTime;
+    }
+    window->timeSum += delta;
+    window->oldTime = newTime;
+
+    refresh = window->timeSum >= frameTime;
+    window->redrawFrame = window->redrawFrame || refresh;
+
+    while (window->timeSum >= frameTime) {
+
+        ++ step;
 
         window->frameCounter = 0;
-        window->redrawFrame = true;
-    
-        if (window->update != NULL && window->transitionTimer <= 0) {
+        window->timeSum -= frameTime;
+        if (updateCount >= MAX_UPDATE_COUNT) {
 
-            window->update((Window*) window, window->frameSkip+1);
+            window->timeSum = 0;
+            break;
         }
+    }
 
-        update_transition(window, window->frameSkip+1);
-        audio_update(window->audio, window->frameSkip+1);
+    if (refresh) {
+
+        if (window->update != NULL && 
+            window->transitionTimer <= 0) {
+
+            window->update((Window*) window, step);
+        }
 
         check_default_key_shortcuts(window);
         keyboard_update();
+        
+        update_transition(window, step);
+        audio_update(window->audio, step);
 
         if (window->redraw != NULL) {
 
             window->redraw(window->framebuffer);
         }
-
-        vblank();  
-
-        if (window->redrawFrame)
-            copy_canvas_to_screen(window);
     }
-    else {
 
-        vblank();
+    vblank();  
+    if (refresh) {
+        
+        copy_canvas_to_screen(window);
     }
 }
 
@@ -206,6 +244,9 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
 
     w->loadingBitmap = NULL;
 
+    w->oldTime = 0;
+    w->timeSum = 0;
+
     return (Window*) w;
 }
 
@@ -241,6 +282,8 @@ void window_make_active(Window* _window) {
     _Window* window = (_Window*) _window;
 
     window->running = true;
+
+    window->oldTime = (i32) clock();
 
     while (window->running) {
 
