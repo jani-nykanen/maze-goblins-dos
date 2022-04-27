@@ -6,23 +6,22 @@
 #include <graph.h>
 
 
-typedef u8 Table [HUE_COUNT] [256];
+typedef u8 Table [HUE_COUNT] [256*3];
 
+static u8 HUE_DARK [HUE_COUNT] [256*3];
+static u8 HUE_LIGHT [HUE_COUNT] [256*3];
 
-static u8 HUE_DARK [HUE_COUNT] [256];
-static u8 HUE_LIGHT [HUE_COUNT] [256];
+static const u32 PALETTE_INDEX = 0x03c8;
+static const u32 PALETTE_DATA = 0x03c9;
 
 
 static void set_base_palette() {
 
-    const u32 PALETTE_INDEX = 0x03c8;
-    const u32 PALETTE_DATA = 0x03c9;
-
     u8 i = 0;
     u8 r, g, b;
 
-    outp(PALETTE_INDEX,0);
-    do {
+    outp(PALETTE_INDEX, 0);
+    while (1) {
 
         r = i >> 5;
         g = i << 3;
@@ -37,24 +36,32 @@ static void set_base_palette() {
         if (r >= 252) r = 255;
         if (g >= 252) g = 255;
 
-        outp(PALETTE_DATA, r / 4);
-        outp(PALETTE_DATA, g / 4);
-        outp(PALETTE_DATA, b / 4);
+        outp(PALETTE_DATA, r >> 2);
+        outp(PALETTE_DATA, g >> 2);
+        outp(PALETTE_DATA, b >> 2);
+
+        if (i == 255) break;
+
+        ++ i;
     }
-    while ((++ i) != 0);
 }
 
 
 static void compute_hue_palettes() {
 
+    // A bit ugly, but, well, it works, and
+    // since this is called in the beginning,
+    // performance isn't that important.
+
     i16 i = 0;
-    i16 j;
+    i16 j, k;
     u8 r, g, b;
     u8 mr, mg, mb;
     u8 c;
 
     for (i = 0; i < 256; ++ i) {
-
+        
+        k = i * 3;
         c = (u8) i;
 
         r = c >> 5;
@@ -63,48 +70,81 @@ static void compute_hue_palettes() {
         b = c << 6;
         b >>= 6;
 
+        r *= 36;
+        g *= 36;
+        b *= 85;
+
+        if (r >= 252) r = 255;
+        if (g >= 252) g = 255;
+
+        mr = r;
+        mg = g;
+        mb = b;
+
         // Dark
         for (j = 0; j < HUE_COUNT; ++ j) {
 
-            mr = r << 5;
-            mg = g << 2;
-            mb = b;
+            HUE_DARK[j][k] = mr;
+            HUE_DARK[j][k + 1] = mg;
+            HUE_DARK[j][k + 2] = mb;
 
-            HUE_DARK[j][i] = mr | mg | mb;
+            if (j == HUE_COUNT-1) break;;
 
-            if (j == HUE_COUNT-1) break;
+            if (mr >= 36) mr -= 36;
+            if (mg >= 36) mg -= 36;
+            if (j % 2 != 0 && mb >= 85) mb -= 85;
 
-            if (r > 0) -- r;
-            if (g > 0) -- g;
-            if (b > 0 && j % 2 != 0)
-                -- b;
         }
 
-        // And lets recalculate...
-        r = c >> 5;
-        g = c << 3;
-        g >>= 5;
-        b = c << 6;
-        b >>= 6;
+        mr = r;
+        mg = g;
+        mb = b;
 
         // Light
         for (j = 0; j < HUE_COUNT; ++ j) {
 
-            mr = r << 5;
-            mg = g << 2;
-            mb = b;
+            HUE_LIGHT[j][k] = mr;
+            HUE_LIGHT[j][k + 1] = mg;
+            HUE_LIGHT[j][k + 2] = mb;
 
-            HUE_LIGHT[j][i] = mr | mg | mb;
+            if (j == HUE_COUNT-1) break;;
 
-            if (j == HUE_COUNT-1) break;
+            if (mr <= 255 - 36) mr += 36;
+            if (mg <= 255 - 36) mg += 36;
+            if (j % 2 != 0 && mb <= 255 - 85) mb += 85;
 
-            if (r < 7) ++ r;
-            if (g < 7) ++ g;
-            if (b < 3 && j % 2 != 0)
-                ++ b;
+            if (mr >= 252) mr = 255;
+            if (mg >= 252) mg = 255;
         }
     }
 
+}
+
+
+static void palette_swap(i16 hue, Table* table) {
+
+    i16 i, j;
+    u8 r, g, b;
+
+    if (hue >= HUE_COUNT) {
+
+        hue = HUE_COUNT-1;
+    }
+
+    outp(PALETTE_INDEX, 0);
+
+    for (i = 0; i < 256; ++ i) {
+
+        j = i * 3;
+
+        r = (*table)[hue][j];
+        g = (*table)[hue][j + 1];
+        b = (*table)[hue][j + 2];
+
+        outp(PALETTE_DATA, r >> 2);
+        outp(PALETTE_DATA, g >> 2);
+        outp(PALETTE_DATA, b >> 2);
+    }
 }
 
 
@@ -115,74 +155,19 @@ void init_palette() {
 }
 
 
-u8 darken_color(u8 color, i16 amount) {
+void palette_swap_dark(i16 hue) {
 
-    if (amount <= 0)
-        return color;
-    else if (amount >= HUE_COUNT)
-        return 0;
-
-    return HUE_DARK[amount][(u16) color];
+    palette_swap(hue, &HUE_DARK);
 }
 
 
-u8 lighten_color(u8 color, i16 amount) {
+void palette_swap_light(i16 hue) {
 
-    if (amount <= 0)
-        return color;
-    else if (amount >= HUE_COUNT)
-        return 0;
-
-    return HUE_LIGHT[amount][(u16) color];
+    palette_swap(hue, &HUE_LIGHT);
 }
 
 
-void copy_hued_data_to_location(u8* data, u8* target, u16 len, u16 offset, i16 hue) {
+void reset_palette() {
 
-    // Should be faster than palette swapping, which, at least
-    // in my experience, is slow
-    // (well, this is not very fast either...)
-
-    u16 i, j, k;
-    u8 dither;
-    Table* table = &HUE_DARK;
-
-    u16 rows;
-
-    if (hue < 0) {
-
-        hue *= -1;
-        table = &HUE_LIGHT;
-    }
-    else if (hue >= (HUE_COUNT-1)*2)
-        hue = (HUE_COUNT-1)*2;
-
-    if (hue % 2 == 0) {
-
-        hue /= 2;
-        for (i = 0; i < len; ++ i) {
-
-            target[i] = (*table)[hue][(u16) data[i]];
-        }
-    }
-    else {
-
-        hue /= 2;
-
-        rows = len / offset;
-
-        k = 0;
-        dither = 0;
-        for (j = 0; j < rows; ++ j) {
-
-            for (i = 0; i < offset; ++ i) {
-
-                target[k] = (*table)[hue + dither][(u16) data[k]];
-                dither = !dither;
-
-                ++ k;
-            }
-            dither = !dither;
-        }
-    }
+    palette_swap_dark(0);
 }

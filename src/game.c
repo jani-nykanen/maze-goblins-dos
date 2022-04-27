@@ -395,8 +395,6 @@ static void draw_waiting_text(Canvas* canvas) {
     canvas_fill_rect(canvas, x+1, y+1, boxW-2, boxH-2, 255);
     canvas_fill_rect(canvas, x+2, y+2, boxW-4, boxH-4, 0);
 
-    canvas_darken(canvas, 1);
-
     if (game->victory) {
 
         canvas_draw_text_fast(canvas, game->bmpFont,
@@ -437,7 +435,7 @@ static void draw_pause(Canvas* canvas) {
 
         if (!game->hintDrawn) {
 
-            canvas_draw_text(canvas, game->bmpFontYellow,
+            canvas_draw_text(canvas, game->bmpFont,
                 "HINT: Press Backspace\nor Z to undo a move.",
                 80, h-20, 0, 2, ALIGN_LEFT);
             game->hintDrawn = true;
@@ -481,7 +479,6 @@ static void redraw_game(Canvas* canvas) {
 
         if (!game->bufferCloned) {
 
-            canvas_darken(canvas, 2);
             canvas_store_to_buffer(canvas);
 
             game->bufferCloned = true;
@@ -493,7 +490,7 @@ static void redraw_game(Canvas* canvas) {
             canvas_draw_buffered_image(canvas);
             game->bufferRedrawn = true;
         }
-
+        
         draw_pause(canvas);
         return;
     }

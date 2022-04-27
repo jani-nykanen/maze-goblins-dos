@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #include <dos.h>
 #include <conio.h>
@@ -41,9 +40,6 @@ typedef struct {
     TransitionCallback transitionCb;
 
     Bitmap* loadingBitmap;
-
-    i32 timeSum;
-    i32 oldTime;
 
 } _Window;
 
@@ -86,8 +82,7 @@ static void update_transition(_Window* window, i16 step) {
     i16 hue;
 
     if (window->transitionTimer <= 0) {
-
-        canvas_set_global_hue(window->framebuffer, 0);
+        
         return;
     }
 
@@ -103,23 +98,37 @@ static void update_transition(_Window* window, i16 step) {
 
             window->transitionTimer += TRANSITION_TIME;
         }
+        else {
+
+            reset_palette();
+            window->redrawFrame = true;
+            return;
+        }
     }
 
     if (window->transitionType == TRANSITION_NONE)
         return; 
 
-    hue = ((HUE_COUNT-1)*2) * window->transitionTimer;
+    hue = (HUE_COUNT-1) * window->transitionTimer;
     hue /= TRANSITION_TIME;
 
     if (window->fadingOut)
-        hue = ((HUE_COUNT-1)*2) - hue;
+        hue = (HUE_COUNT-1) - hue;
 
-    hue = clamp_i16(hue, 0, (HUE_COUNT-1)*2);
+    hue = clamp_i16(hue, 0, (HUE_COUNT-1));
 
     if (window->transitionType == TRANSITION_LIGHTEN)
         hue *= -1; 
 
-    canvas_set_global_hue(window->framebuffer, hue);
+    if (hue >= 0) {
+
+        palette_swap_dark(hue);
+    }
+    else {
+
+        palette_swap_light(-hue);
+    }
+    
 
     if (hue == window->oldHue) {
 
@@ -131,69 +140,35 @@ static void update_transition(_Window* window, i16 step) {
 
 static void loop(_Window* window) {
 
-    const i32 FRAME_TIME = 17;
-    const i16 MAX_UPDATE_COUNT = 5;
-
-    i32 newTime = (i32) clock();
-    i32 delta;
-    i16 updateCount = 0;
-
-    i32 frameTime = FRAME_TIME * (window->frameSkip+1);
-    i16 step = 0;
-
-    bool refresh = false;
-    
-    if (newTime < window->oldTime) {
-
-        delta = 0;
-    }
-    else {
-
-        delta = newTime - window->oldTime;
-    }
-    window->timeSum += delta;
-    window->oldTime = newTime;
-
-    refresh = window->timeSum >= frameTime;
-    window->redrawFrame = window->redrawFrame || refresh;
-
-    while (window->timeSum >= frameTime) {
-
-        ++ step;
+    if ( (window->frameCounter ++) == window->frameSkip) {
 
         window->frameCounter = 0;
-        window->timeSum -= frameTime;
-        if (updateCount >= MAX_UPDATE_COUNT) {
+        window->redrawFrame = true;
+    
+        if (window->update != NULL && window->transitionTimer <= 0) {
 
-            window->timeSum = 0;
-            break;
+            window->update((Window*) window, window->frameSkip+1);
         }
-    }
 
-    if (refresh) {
-
-        if (window->update != NULL && 
-            window->transitionTimer <= 0) {
-
-            window->update((Window*) window, step);
-        }
+        update_transition(window, window->frameSkip+1);
+        audio_update(window->audio, window->frameSkip+1);
 
         check_default_key_shortcuts(window);
         keyboard_update();
-        
-        update_transition(window, step);
-        audio_update(window->audio, step);
 
         if (window->redraw != NULL) {
 
             window->redraw(window->framebuffer);
         }
-    }
 
-    vblank();  
-    if (refresh) {
-        
-        copy_canvas_to_screen(window);
+        vblank();  
+
+        if (window->redrawFrame)
+            copy_canvas_to_screen(window);
+    }
+    else {
+
+        vblank();
     }
 }
 
@@ -244,9 +219,6 @@ Window* new_window(u16 width, u16 height, str caption, i16 frameSkip) {
 
     w->loadingBitmap = NULL;
 
-    w->oldTime = 0;
-    w->timeSum = 0;
-
     return (Window*) w;
 }
 
@@ -282,8 +254,6 @@ void window_make_active(Window* _window) {
     _Window* window = (_Window*) _window;
 
     window->running = true;
-
-    window->oldTime = (i32) clock();
 
     while (window->running) {
 
@@ -337,7 +307,7 @@ void window_draw_loading_screen(Window* _window, u8 clearColor) {
 
     vblank();  
 
-    canvas_set_global_hue(window->framebuffer, 0);
+    reset_palette();
 
     bitmap_get_size(window->loadingBitmap, &bw, &bh);
     canvas_get_size(window->framebuffer, &w, &h);

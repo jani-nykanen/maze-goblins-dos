@@ -77,7 +77,7 @@ i16 main() {
         return 1;
     }
 
-    window = new_window(320, 200, "Game", 0);
+    window = new_window(320, 200, "Game", 1);
     if (window == NULL) {
 
         dispose_window(NULL);
