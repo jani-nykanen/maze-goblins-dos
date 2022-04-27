@@ -39,6 +39,7 @@ It should compile without errors (only some warnings). You can enable some optim
 ### License
 
 Assets: Attribution CC BY
+
 Code: MIT (not that I really care what you do with my code since if you use it in your own code, you do more harm to yourself than to me...)
 
 --------
