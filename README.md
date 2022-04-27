@@ -1,3 +1,5 @@
+![](https://media.githubusercontent.com/media/jani-nykanen/maze-goblins-dos/main/misc/logo_git_out.png)
+
 ## The Maze of DOS Goblins
 
 This was supposed to be a DOS port of my js13k 2021 entry. And in a way, it is. I mean, yes, it has all the features it was supposed to have, you can play through it, and after some violent bug fixing it even has a decent performance and the bugs are mostly visual. But... eh, well, I forgot my point. 
